@@ -34,6 +34,9 @@ const snap = async (name) => {
   await shot(page, `${out}/${String(shots.size).padStart(2, '0')}-${name}.png`);
 };
 
+let foldFails = 0;
+let carryFails = 0;
+const issues = [];
 async function foldStep() {
   let info;
   for (let i = 0; i < 300; i++) {
@@ -46,6 +49,22 @@ async function foldStep() {
   await setPinch(page, R, 0);
   await movePinchTo(page, R, [path[0][0], path[0][1] + 0.05, path[0][2]]);
   await pinchAt(page, R, path[0]);
+  const st = await page.evaluate(() => {
+    const h = window.__app.hands.right;
+    return { phase: window.__app.scene.foldController?.phase, tracked: h.tracked, pinching: h.pinching, age: h.pinchAge, claimed: h.claimedBy ? h.claimedBy.constructor.name : null, pp: h.pinchPoint.toArray().map((v) => +v.toFixed(3)) };
+  });
+  if (st.phase !== 'drag') {
+    foldFails++;
+    log('grab failed', JSON.stringify(st), 'target', JSON.stringify(path[0].map((v) => +v.toFixed(3))));
+    if (foldFails >= 3) {
+      issues.push(`fold step ${info.step}: grab failed 3x, skipped`);
+      await page.evaluate(() => window.__app.scene.foldController?.skipAll());
+      foldFails = 0;
+    }
+    await setPinch(page, R, 0);
+    return true;
+  }
+  foldFails = 0;
   for (let i = 1; i < path.length; i++) await movePinchTo(page, R, path[i]);
   await setPinch(page, R, 0);
   await frames(page, 6);
@@ -56,6 +75,15 @@ async function carry(obj, to, lift = 0.05) {
   await setPinch(page, R, 0);
   await movePinchTo(page, R, [obj[0], obj[1] + 0.05, obj[2]]);
   await pinchAt(page, R, obj);
+  const held = await page.evaluate(() => {
+    const h = window.__app.hands.right;
+    const fs = window.__app.scene.stage?.foldlings ?? [];
+    return { held: fs.some((f) => f.mode === 'held'), modes: fs.map((f) => `${f.def.id}:${f.mode}`).join(','), claimed: h.claimedBy ? h.claimedBy.constructor.name : null, pinching: h.pinching, age: +h.pinchAge.toFixed(2), pp: h.pinchPoint.toArray().map((v) => +v.toFixed(3)) };
+  });
+  if (!held.held) {
+    carryFails++;
+    if (carryFails <= 2) log('carry: nothing grabbed', JSON.stringify(held), 'obj', JSON.stringify(obj.map((v) => +v.toFixed(3))));
+  } else carryFails = 0;
   const mid = [(obj[0] + to[0]) / 2, Math.max(obj[1], to[1]) + lift, (obj[2] + to[2]) / 2];
   for (let i = 1; i <= 6; i++) await movePinchTo(page, R, lerp3(obj, mid, i / 6));
   for (let i = 1; i <= 6; i++) await movePinchTo(page, R, lerp3(mid, [to[0], to[1] + 0.025, to[2]], i / 6));
@@ -73,6 +101,12 @@ for (;;) {
   }
   if (beat === 'end' || beat === 'none') break;
   guard++;
+  if (!['intro', 'talk', 'fold'].includes(beat) && guard > 30) {
+    log(`STUCK at beat ${beat}`);
+    await snap(`stuck-${beat}`);
+    process.exitCode = 2;
+    break;
+  }
   switch (beat) {
     case 'fold': {
       const did = await foldStep();
@@ -95,14 +129,15 @@ for (;;) {
       await carry(targets.obj, targets.to);
       await snap(`${beat}-held`);
       if (beat === 'dip') {
-        // dunk into the well
+        // dunk into the well and keep holding the cup for pouring
         await movePinchTo(page, R, [targets.to[0], targets.to[1], targets.to[2]]);
         await frames(page, 6);
+        await movePinchTo(page, R, [targets.to[0], targets.to[1] + 0.08, targets.to[2]]);
       } else {
         await setPinch(page, R, 0);
         await frames(page, 10);
+        await restHand();
       }
-      await restHand();
       break;
     }
     case 'pour': {
@@ -113,6 +148,8 @@ for (;;) {
         break;
       }
       const f = flowers[0];
+      const holding = await page.evaluate(() => window.__app.scene.stage.foldlings.some((x) => x.mode === 'held'));
+      if (!holding) await carry(targets.obj, [f[0], f[1] + 0.06, f[2]]);
       await movePinchTo(page, R, [f[0], f[1] + 0.09, f[2]]);
       // tip the hand to pour
       for (let a = 0; a <= 1.5; a += 0.25) {
@@ -180,6 +217,7 @@ for (;;) {
   }
 }
 log('finished');
+if (issues.length) log('ISSUES:', issues.join(' | '));
 await sleep(4000);
 await snap('menu');
 const errors = logs.filter((l) => /\[(error|pageerror)\]/.test(l) && !l.includes('ERR_TUNNEL'));

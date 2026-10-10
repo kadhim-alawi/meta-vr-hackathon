@@ -420,9 +420,10 @@ function coverTexture(): CanvasTexture {
   g.fill();
   const t = new CanvasTexture(c);
   t.colorSpace = SRGBColorSpace;
-  // the cover face is the top (+y) of the front board, which is flipped when
-  // the book is closed; rotate so the text reads from the player's side
+  // The cover art sits on the front board's −y face, which faces up once the
+  // board is flipped shut (rotated π about z). That flip mirrors u and puts
+  // v=1 at the near edge, so the art needs a half turn to read upright.
   t.center.set(0.5, 0.5);
-  t.rotation = Math.PI / 2;
+  t.rotation = Math.PI;
   return t;
 }

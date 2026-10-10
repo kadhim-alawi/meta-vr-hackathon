@@ -82,4 +82,5 @@ export const boat: ModelDef = {
     { at: P(0.09, -0.42), r: 0.024 },
   ],
   alive: 'boat',
+  aliveScale: 0.38,
 };

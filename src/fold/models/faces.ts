@@ -36,6 +36,7 @@ export const dog: ModelDef = {
     { fold: [0.15, -0.25], r: 0.035 },
   ],
   alive: 'face',
+  aliveScale: 0.42,
 };
 
 const catD = diamond('back');
@@ -62,6 +63,7 @@ export const cat: ModelDef = {
     { fold: [0.17, -0.22], r: 0.035 },
   ],
   alive: 'face',
+  aliveScale: 0.42,
 };
 
 const foxD = diamond('back');
@@ -84,4 +86,5 @@ export const fox: ModelDef = {
     { fold: [0, -0.46], r: 0.03 },
   ],
   alive: 'face',
+  aliveScale: 0.42,
 };

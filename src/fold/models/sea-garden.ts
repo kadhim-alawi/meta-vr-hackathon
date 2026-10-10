@@ -47,6 +47,7 @@ export const whale: ModelDef = {
   eyes: [{ fold: [0.07, 0.17], r: 0.026 }],
   cheeks: [{ fold: [0.12, 0.1], r: 0.03 }],
   alive: 'swimmer',
+  aliveScale: 0.45,
   // head along +x, back (the folded edge) up
   pose: [Math.PI / 2, -Math.PI / 2, 0],
 };
@@ -78,4 +79,5 @@ export const tulip: ModelDef = {
     { fold: [0.12, 0.07], r: 0.026 },
   ],
   alive: 'flower',
+  aliveScale: 0.4,
 };

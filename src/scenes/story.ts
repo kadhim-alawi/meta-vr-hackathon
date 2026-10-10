@@ -417,7 +417,7 @@ export class StoryScene implements Scene {
     this.app.audio.splash(this.app.fromDesk(startDesk));
     this.app.sparkles.droplets(this.app.fromDesk(startDesk), new Vector3(0, 0.4, 0), 10);
     // Kit hops aboard
-    const deck = () => this.deskToBook(boat.group.position.clone().add(this.tmp.set(0, 0.013, 0)));
+    const deck = () => this.deskToBook(boat.group.position.clone().add(this.tmp.set(0, 0.006, 0.016)));
     await s.guard(kit.hopTo(deck(), 0.6, 0.05));
     kit.setEmote('cheer');
     await this.say('All aboard! Now we just need some wind…');
@@ -554,7 +554,7 @@ export class StoryScene implements Scene {
         const tilt = Math.acos(clamp(up.y, -1, 1));
         if (tilt > 0.75) {
           // water falls from the cup lip
-          const lip = cup.group.position.clone().add(this.tmp.copy(up).multiplyScalar(cup.size.y * 1.5));
+          const lip = cup.group.position.clone().add(this.tmp.copy(up).multiplyScalar(cup.size.y * 1.5 * cup.s));
           pouring = true;
           if (Math.random() < 0.6) this.app.sparkles.droplets(this.app.fromDesk(lip), new Vector3(up.x * 0.3, -0.2, up.z * 0.3), 1);
           flowersDesk.forEach((fp, i) => {

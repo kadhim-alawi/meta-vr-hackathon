@@ -105,8 +105,11 @@ export class HandState {
    * target and sliding onto it.
    */
   get freshPinch(): boolean {
-    return this.pinching && !this.claimedBy && this.pinchAge < 0.4;
+    // 0.4 s or 8 frames, whichever is longer, so slow frames don't shrink it
+    return this.pinching && !this.claimedBy && (this.pinchAge < 0.4 || this.pinchFrames < 8);
   }
+  /** frames since the current pinch began */
+  pinchFrames = 0;
 
   constructor(side: Side) {
     this.side = side;
@@ -159,6 +162,7 @@ export class HandState {
   _updatePinchEdges(dt = 0): void {
     this.pinchStarted = this.pinching && !this.wasPinching;
     this.pinchAge = this.pinching ? (this.pinchStarted ? 0 : this.pinchAge + dt) : 0;
+    this.pinchFrames = this.pinching ? (this.pinchStarted ? 0 : this.pinchFrames + 1) : 0;
     this.pinchEnded = !this.pinching && this.wasPinching;
     this.wasPinching = this.pinching;
     if (this.pinchEnded) this.claimedBy = null;
@@ -280,9 +284,13 @@ export class HandTracker {
     hs.pinchPoint.copy(tt).add(it).multiplyScalar(0.5);
     const d = tt.distanceTo(it);
     hs.pinchStrength = clamp01(1 - (d - PINCH_START) / (0.07 - PINCH_START));
-    // Hysteresis on distance; the runtime's own select (pinch) also counts.
-    if (hs.pinching) hs.pinching = d < PINCH_END || hs.systemSelect;
-    else hs.pinching = d < PINCH_START || hs.systemSelect;
+    // Hysteresis on distance. The runtime's own select (pinch) also counts,
+    // but only while the fingertips are plausibly together, so a missed
+    // 'selectend' can never leave a pinch stuck on.
+    const sys = hs.systemSelect && d < 0.05;
+    if (hs.pinching) hs.pinching = d < PINCH_END || sys;
+    else hs.pinching = d < PINCH_START || sys;
+    if (hs.systemSelect && d > 0.07) hs.systemSelect = false;
 
     // Palm frame from wrist and knuckles.
     const w = hs.joints[J.wrist];

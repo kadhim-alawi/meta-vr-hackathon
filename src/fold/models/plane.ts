@@ -90,5 +90,6 @@ export const plane: ModelDef = {
     { at: P(0.05, 0.3), r: 0.018 },
   ],
   alive: 'glider',
+  aliveScale: 0.55,
 };
 

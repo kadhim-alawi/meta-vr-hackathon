@@ -155,13 +155,24 @@ export class Foldling {
     this.offset.position.copy(corr.applyQuaternion(qInv));
   }
 
-  get radius(): number {
-    return Math.max(this.size.x, this.size.y, this.size.z);
+  /** current uniform scale (creatures shrink to storybook size when alive) */
+  get s(): number {
+    return this.group.scale.x;
   }
+
+  get radius(): number {
+    return Math.max(this.size.x, this.size.y, this.size.z) * this.s;
+  }
+
+  /** scale the creature eases to once awake */
+  scaleGoal = 1;
 
   /** world-ish centre of the body (desk-local) */
   centreLocal(out: Vector3): Vector3 {
-    return out.copy(this.group.position).add(this.tmp.set(0, this.size.y, 0));
+    // no scratch vectors here: callers pass this.tmp as `out`
+    out.copy(this.group.position);
+    out.y += this.size.y * this.s + this.body.position.y * this.s;
+    return out;
   }
 
   /** The waking sequence: glow, ink eyes, hop up into pose. */
@@ -175,6 +186,8 @@ export class Foldling {
   /** Skip the waking show (Foldlings restored from a save). */
   awaken(): void {
     this.mode = 'idle';
+    this.scaleGoal = this.def.aliveScale ?? 1;
+    this.group.scale.setScalar(this.scaleGoal);
     this.sheet.drawFace();
     this.fanOpen = 1;
     this.fanMesh?.setOpen(1);
@@ -183,6 +196,7 @@ export class Foldling {
 
   private finishWake(): void {
     this.mode = 'idle';
+    this.scaleGoal = this.def.aliveScale ?? 1;
     setPaperGlow(this.sheet.material, 0);
     this.app.audio.chirp(this.app.fromDesk(this.group.position), VOICE[this.def.id] ?? 74, 3, 'happy');
   }
@@ -223,6 +237,9 @@ export class Foldling {
   update(dt: number, t: number): void {
     this.t += dt;
     this.pokeCool = Math.max(0, this.pokeCool - dt);
+    if (this.mode !== 'waking' && Math.abs(this.s - this.scaleGoal) > 1e-4) {
+      this.group.scale.setScalar(this.s + (this.scaleGoal - this.s) * damp(5, dt));
+    }
     switch (this.mode) {
       case 'waking':
         this.updateWake(dt);
@@ -330,7 +347,7 @@ export class Foldling {
         this.spoutT -= dt;
         if (this.spoutT < 0) {
           this.spoutT = 4 + this.rnd() * 4;
-          const top = this.app.fromDesk(this.centreLocal(this.tmp).add(this.tmp2.set(0, this.size.y * 1.2, 0)));
+          const top = this.app.fromDesk(this.centreLocal(this.tmp).add(this.tmp2.set(0, this.size.y * 1.2 * this.s, 0)));
           this.app.sparkles.droplets(top, new Vector3(0, 0.55, 0), 10);
           this.app.audio.splash(top);
         }

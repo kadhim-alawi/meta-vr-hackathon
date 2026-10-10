@@ -34,4 +34,5 @@ export const fan: ModelDef = {
   steps,
   eyes: [],
   alive: 'fan',
+  aliveScale: 0.5,
 };

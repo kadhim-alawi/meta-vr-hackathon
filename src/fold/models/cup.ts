@@ -70,4 +70,5 @@ export const cup: ModelDef = {
     { at: P(0.13, 0.05), r: 0.03 },
   ],
   alive: 'cup',
+  aliveScale: 0.36,
 };

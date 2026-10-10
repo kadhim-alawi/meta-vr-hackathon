@@ -95,4 +95,5 @@ export const heart: ModelDef = {
     { fold: [0.13, 0.07], r: 0.03 },
   ],
   alive: 'heart',
+  aliveScale: 0.36,
 };

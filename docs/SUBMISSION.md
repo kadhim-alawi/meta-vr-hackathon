@@ -8,7 +8,7 @@
 
 **Track:** Gaming ⚠ (alternative: Entertainment, as "immersive storytelling")
 **Division:** New Experience (built from scratch during the competition window, from September 24, 2026)
-**Platform:** Meta Quest 3 / 3S and Meta VR Glasses (WebXR, Immersive Web SDK). Hosted link: `https://<your-github-user>.github.io/meta-vr-hackathon/` ⚠
+**Platform:** Meta Quest 3 / 3S and Meta VR Glasses (WebXR, Immersive Web SDK). Hosted link: `https://kadhim-alawi.github.io/meta-vr-hackathon/` (once GitHub Pages is enabled; see README → Deploy)
 
 ---
 

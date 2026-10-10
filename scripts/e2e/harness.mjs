@@ -163,3 +163,39 @@ export async function throwToward(page, side, dir, speed = 1.6, framesN = 5) {
     { side, dir, speed, framesN },
   );
 }
+
+/**
+ * Move the hand's pinch point from its current position to `target` at a
+ * steady hand speed, one step per rendered frame (like a real wave, so the
+ * velocity is seen along the whole path rather than as one jump).
+ */
+export async function sweepTo(page, side, target, speed = 0.7) {
+  await page.evaluate(
+    async ({ side, target, speed }) => {
+      const app = window.__app;
+      const h = app.hands[side];
+      const dev = window.__xrdevice.hands[side];
+      const nextFrame = () =>
+        new Promise((res) => {
+          const t = app.frames + 1;
+          const poll = () => (app.frames >= t ? res() : setTimeout(poll, 1));
+          poll();
+        });
+      let last = performance.now();
+      for (let i = 0; i < 120; i++) {
+        const d = [target[0] - h.pinchPoint.x, target[1] - h.pinchPoint.y, target[2] - h.pinchPoint.z];
+        const len = Math.hypot(...d);
+        if (len < 0.003) break;
+        const now = performance.now();
+        const dt = Math.min(0.1, Math.max(0.011, (now - last) / 1000));
+        last = now;
+        const k = Math.min(1, (speed * dt) / len);
+        dev.position.x += d[0] * k;
+        dev.position.y += d[1] * k;
+        dev.position.z += d[2] * k;
+        await nextFrame();
+      }
+    },
+    { side, target, speed },
+  );
+}

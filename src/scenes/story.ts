@@ -441,7 +441,7 @@ export class StoryScene implements Scene {
         this.app.toDesk(h.palm, this.tmp);
         const d = this.tmp.distanceTo(boat.group.position);
         // wind from a hand sweeping towards +x behind (left of) the boat
-        if (d < 0.2 && this.tmp.x < boat.group.position.x + 0.05) {
+        if (d < 0.2 && this.tmp.x < boat.group.position.x + 0.08) {
           const v = this.tmp2.copy(h.velocity).applyQuaternion(deskQ);
           push = Math.max(push, clamp(v.x, 0, 1.2));
         }
@@ -464,7 +464,7 @@ export class StoryScene implements Scene {
           if (k > progress) progress += Math.min(k - progress, dt * 0.35);
         }
       }
-      progress = Math.min(1, progress + push * dt * 0.28);
+      progress = Math.min(1, progress + push * dt * 0.38);
       wind.set(clamp(push * 1.2, 0, 1));
       if (push > 0.15 && Math.random() < 0.5) {
         this.app.sparkles.drift(this.app.fromDesk(boat.group.position.clone().add(this.tmp.set(-0.05, 0.03, 0))), new Color(0xdff6ff), 0.04);
@@ -629,11 +629,12 @@ export class StoryScene implements Scene {
         if (!h.tracked) continue;
         this.app.toDesk(h.palm, this.tmp);
         const d = this.tmp.distanceTo(millDesk);
-        if (d > 0.35) continue;
+        if (d > 0.4) continue;
         const speed = h.velocity.length();
-        // the fan makes much more wind than a bare hand
+        // the fan makes much more wind than a bare hand; full strength within
+        // 20 cm of the mill, fading out by 40 cm
         const holdingFan = fan.holder === h;
-        power = Math.max(power, speed * (holdingFan ? 1 : 0.45) * (1 - d / 0.35));
+        power = Math.max(power, speed * (holdingFan ? 1 : 0.45) * clamp((0.4 - d) / 0.2, 0, 1));
         if (holdingFan && speed > 0.3 && Math.random() < 0.5) {
           this.app.sparkles.drift(this.app.fromDesk(fan.group.position.clone().add(this.tmp.set(0, 0.04, 0))), new Color(0xe6f7ff), 0.05);
         }
@@ -642,7 +643,8 @@ export class StoryScene implements Scene {
       spin *= Math.exp(-0.7 * dt);
       spin = Math.min(spin, 14);
       sp.rotor.rotation.z -= spin * dt;
-      lift = Math.min(1, lift + Math.max(0, spin - 1.5) * 0.012 * dt);
+      // a few seconds of steady fanning lifts the basket all the way
+      lift = Math.min(1, lift + Math.max(0, spin - 1) * 0.03 * dt);
       sp.basket.position.y = sp.basketBottom.y + lift * 0.1;
       kit.group.position.copy(basketTop());
       wind.set(clamp(spin / 10, 0, 0.8), 0.7 + spin / 14);

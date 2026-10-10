@@ -131,7 +131,8 @@ jitter.
 
 ### Verification
 
-- `npm test`: 28 tests (geometry, folding, area conservation, every model step, eye visibility, hinges).
+- `npm test`: 34 tests (geometry, folding, area conservation, every model step, eye visibility,
+  hinges, the script runner, save data and the story's fold budget).
 - `npm run models`: contact sheets of every fold step (`docs/model-sheets/`).
 - `scripts/e2e/playthrough.mjs`: plays the entire story in headless Chromium with Meta's IWER
   emulator. It folds every model with an emulated hand, throws, sails, pours, fans, turns every page

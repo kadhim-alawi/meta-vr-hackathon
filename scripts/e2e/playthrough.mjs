@@ -4,7 +4,7 @@
  * heart, turns every page and opens the final letter.
  *   node scripts/e2e/playthrough.mjs [quest3|glasses] [startChapter]
  */
-import { launch, frames, movePinchTo, pinchAt, setPinch, shot, sleep, throwToward } from './harness.mjs';
+import { launch, frames, movePinchTo, pinchAt, setPinch, shot, sleep, throwToward, sweepTo } from './harness.mjs';
 
 const device = process.argv[2] ?? 'quest3';
 const chapter = process.argv[3] ?? '';
@@ -166,9 +166,11 @@ for (;;) {
     case 'wind': {
       const at = targets.at;
       await setPinch(page, R, 0);
+      // wave the open hand left to right behind the sail
+      await movePinchTo(page, R, [at[0] - 0.16, at[1] + 0.03, at[2]]);
       for (let k = 0; k < 4; k++) {
-        await movePinchTo(page, R, [at[0] - 0.12, at[1] + 0.03, at[2]]);
-        await movePinchTo(page, R, [at[0] - 0.01, at[1] + 0.03, at[2]]);
+        await sweepTo(page, R, [at[0] + 0.02, at[1] + 0.03, at[2]], 0.8);
+        await sweepTo(page, R, [at[0] - 0.16, at[1] + 0.03, at[2]], 0.8);
       }
       await snap('sailing');
       break;
@@ -178,8 +180,8 @@ for (;;) {
       if (!holding) await carry(targets.obj, [targets.to[0] + 0.12, targets.to[1] - 0.04, targets.to[2] + 0.12]);
       const c = [targets.to[0] + 0.1, targets.to[1] - 0.04, targets.to[2] + 0.1];
       for (let k = 0; k < 6; k++) {
-        await movePinchTo(page, R, [c[0] - 0.06, c[1], c[2]]);
-        await movePinchTo(page, R, [c[0] + 0.06, c[1], c[2]]);
+        await sweepTo(page, R, [c[0] - 0.06, c[1], c[2]], 0.8);
+        await sweepTo(page, R, [c[0] + 0.06, c[1], c[2]], 0.8);
       }
       await snap('fanning');
       break;

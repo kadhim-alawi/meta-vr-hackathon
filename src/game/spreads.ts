@@ -3,7 +3,7 @@
  * page spans x ∈ [0, PAGE_W], the left page x ∈ [−PAGE_W, 0]; +z points at
  * the player. Named markers expose interaction spots to the story script.
  */
-import { Group, Mesh, MeshBasicMaterial, Object3D, PlaneGeometry, Vector3, BoxGeometry, CylinderGeometry } from '@iwsdk/core';
+import { BufferGeometry, Group, InstancedMesh, Matrix4, Mesh, MeshBasicMaterial, Object3D, PlaneGeometry, Vector3, BoxGeometry, CylinderGeometry } from '@iwsdk/core';
 import { PAGE_D, PAGE_W, Spread } from './book.js';
 import {
   Flower,
@@ -25,6 +25,7 @@ import {
   windmill,
 } from './popups.js';
 import { seededRandom } from '../core/util.js';
+import { mergeGeometries } from '../render/merge.js';
 
 export interface StreamSpread extends Spread {
   water: Water[];
@@ -70,13 +71,14 @@ export function streamSpread(): StreamSpread {
   const dockR = new Mesh(new BoxGeometry(0.03, 0.002, 0.03), paperMat(0xa47148));
   dockR.position.set(0.19, 0.001, rz);
   sp.right.add(dockR);
-  sp.left.add(grassTufts(26, [PAGE_W - 0.02, PAGE_D - 0.08], 0x7fbf6a, 4));
-  sp.right.add(grassTufts(26, [PAGE_W - 0.02, PAGE_D - 0.08], 0x7fbf6a, 8));
-  // keep tufts out of the river
-  for (const g of [sp.left.children.at(-1)!, sp.right.children.at(-1)!]) {
-    for (const t of [...g.children]) if (Math.abs(t.position.z - rz) < 0.035) g.remove(t);
-    g.position.x = g === sp.left.children.at(-1) ? -PAGE_W / 2 : PAGE_W / 2;
-  }
+  // grass on both banks, kept out of the river
+  const dry = (_x: number, z: number) => Math.abs(z - rz) >= 0.035;
+  const bankL = grassTufts(26, [PAGE_W - 0.02, PAGE_D - 0.08], 0x7fbf6a, 4, dry);
+  const bankR = grassTufts(26, [PAGE_W - 0.02, PAGE_D - 0.08], 0x7fbf6a, 8, dry);
+  bankL.position.x = -PAGE_W / 2;
+  bankR.position.x = PAGE_W / 2;
+  sp.left.add(bankL);
+  sp.right.add(bankR);
   sp.start = new Vector3(-0.15, PAGE_Y, rz);
   sp.end = new Vector3(0.165, PAGE_Y, rz);
   sp.kitStart = new Vector3(-0.19, PAGE_Y + 0.002, rz + 0.03);
@@ -101,14 +103,17 @@ export function gardenSpread(): GardenSpread {
   sp.add('left', tree(0.08, 0x5fae62, true), -0.19, -0.08, 0.3);
   // fence
   const fence = new Group();
+  const fenceParts: BufferGeometry[] = [];
   for (let i = 0; i < 7; i++) {
     const post = cutout(rectShape(0.005, 0.025), 0xf3e3c3, 0.0012);
-    post.position.x = i * 0.018;
-    fence.add(post);
+    fenceParts.push(post.geometry.translate(i * 0.018, 0, 0));
   }
   const rail = cutout(rectShape(0.115, 0.004), 0xf3e3c3, 0.0012);
-  rail.position.set(0.054, 0.015, 0.001);
-  fence.add(rail);
+  fenceParts.push(rail.geometry.translate(0.054, 0.015, 0.001));
+  const fenceMesh = new Mesh(mergeGeometries(fenceParts), paperMat(0xf3e3c3));
+  fenceMesh.castShadow = true;
+  fenceMesh.receiveShadow = true;
+  fence.add(fenceMesh);
   sp.add('right', fence, 0.05, -0.09, 0.35);
   const colors = [0xe85d9a, 0xf2a03a, 0x8a6fd6];
   const spots: [number, number][] = [
@@ -271,12 +276,17 @@ export function nightSpread(): NightSpread {
   const rc = cloud(0.07);
   rc.position.y = 0.12;
   rain.add(rc);
-  for (let i = 0; i < 18; i++) {
-    const d = new Mesh(new PlaneGeometry(0.0012, 0.008), new MeshBasicMaterial({ color: 0x9fc7ee }));
-    d.position.set((rnd() - 0.5) * 0.08, rnd() * 0.11, (rnd() - 0.5) * 0.04);
-    d.userData.speed = 0.12 + rnd() * 0.05;
-    rain.add(d);
+  // paper streaks that fall: one instanced mesh, one draw call
+  const DROPS = 18;
+  const drops = new InstancedMesh(new PlaneGeometry(0.0012, 0.008), new MeshBasicMaterial({ color: 0x9fc7ee }), DROPS);
+  drops.frustumCulled = false;
+  const dropXYZS = new Float32Array(DROPS * 4);
+  const dropM = new Matrix4();
+  for (let i = 0; i < DROPS; i++) {
+    dropXYZS.set([(rnd() - 0.5) * 0.08, rnd() * 0.11, (rnd() - 0.5) * 0.04, 0.12 + rnd() * 0.05], i * 4);
+    drops.setMatrixAt(i, dropM.makeTranslation(dropXYZS[i * 4], dropXYZS[i * 4 + 1], dropXYZS[i * 4 + 2]));
   }
+  rain.add(drops);
   rain.position.set(0.12, 0, 0.0);
   sp.right.add(rain);
   sp.rain = rain;
@@ -296,11 +306,14 @@ export function nightSpread(): NightSpread {
   sp.tick = (dt) => {
     for (const t of tints) (t.material as MeshBasicMaterial).opacity = 0.55 * (1 - day);
     rain.visible = day < 0.5;
-    for (const d of rain.children) {
-      if (!d.userData.speed) continue;
-      d.position.y -= d.userData.speed * dt;
-      if (d.position.y < 0.002) d.position.y = 0.11;
+    if (!rain.visible) return;
+    for (let i = 0; i < DROPS; i++) {
+      let y = dropXYZS[i * 4 + 1] - dropXYZS[i * 4 + 3] * dt;
+      if (y < 0.002) y = 0.11;
+      dropXYZS[i * 4 + 1] = y;
+      drops.setMatrixAt(i, dropM.makeTranslation(dropXYZS[i * 4], y, dropXYZS[i * 4 + 2]));
     }
+    drops.instanceMatrix.needsUpdate = true;
   };
   return sp;
 }

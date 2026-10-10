@@ -147,13 +147,27 @@ export class Book {
     this.setOpen(0);
   }
 
+  /** desk-local slot the book glides to (its centre, before tilting) */
+  private slotPos = new Vector3();
+
+  /**
+   * Tilting turns about the book's centre, which would sink the front edge
+   * into the table; lift by the same amount so it rests on its front edge
+   * like a lectern.
+   */
+  private placeOnSlot(): void {
+    this.group.position.copy(this.slotPos);
+    this.group.position.y += Math.sin(Math.max(0, this.tilt)) * (PAGE_D / 2 + 0.006);
+  }
+
   /** Where the book should sit (desk-local) and how much to tilt it up. */
   setSlot(pos: Vector3, tilt = 0, immediate = false): void {
     this.goalPos.copy(pos);
     this.goalTilt = tilt;
     if (immediate) {
-      this.group.position.copy(pos);
+      this.slotPos.copy(pos);
       this.tilt = tilt;
+      this.placeOnSlot();
     }
   }
 
@@ -240,8 +254,9 @@ export class Book {
 
   update(dt: number, time: number): void {
     // glide to slot
-    this.group.position.lerp(this.goalPos, damp(5, dt));
+    this.slotPos.lerp(this.goalPos, damp(5, dt));
     this.tilt += (this.goalTilt - this.tilt) * damp(5, dt);
+    this.placeOnSlot();
     this.wiggle = Math.max(0, this.wiggle - dt * 1.6);
     // positive x-rotation lifts the far edge towards the player
     this.group.rotation.set(this.tilt, Math.sin(time * 30) * 0.03 * this.wiggle, Math.sin(time * 23) * 0.02 * this.wiggle);

@@ -9,6 +9,7 @@ import {
   CylinderGeometry,
   DoubleSide,
   ExtrudeGeometry,
+  BufferGeometry,
   Group,
   Mesh,
   MeshBasicMaterial,
@@ -25,6 +26,7 @@ import {
 } from '@iwsdk/core';
 import { paperFiber } from './kit.js';
 import { markShared } from '../render/dispose.js';
+import { mergeGeometries } from '../render/merge.js';
 import { clamp, easeOutBack, seededRandom } from '../core/util.js';
 
 const matCache = new Map<number, MeshLambertMaterial>();
@@ -199,9 +201,14 @@ export function cloud(w: number): Mesh {
   return cutout(cloudShape(w), 0xfdfaf2);
 }
 
-export function grassTufts(n: number, area: [number, number], color = 0x7fbf6a, seed = 3): Group {
+/**
+ * A scatter of grass tufts merged into one mesh (one draw call). `keep`
+ * filters tuft positions, e.g. to keep them out of a river.
+ */
+export function grassTufts(n: number, area: [number, number], color = 0x7fbf6a, seed = 3, keep?: (x: number, z: number) => boolean): Group {
   const g = new Group();
   const rnd = seededRandom(seed);
+  const geos: BufferGeometry[] = [];
   for (let i = 0; i < n; i++) {
     const s = new Shape();
     const w = 0.008 + rnd() * 0.006;
@@ -212,10 +219,21 @@ export function grassTufts(n: number, area: [number, number], color = 0x7fbf6a, 
     s.lineTo(w / 4, h * 1.1);
     s.lineTo(w / 2, 0);
     s.closePath();
+    const x = (rnd() - 0.5) * area[0];
+    const z = (rnd() - 0.5) * area[1];
+    const ry = rnd() * Math.PI;
+    if (keep && !keep(x, z)) continue;
     const m = cutout(s, color, 0.001);
-    m.position.set((rnd() - 0.5) * area[0], 0, (rnd() - 0.5) * area[1]);
-    m.rotation.y = rnd() * Math.PI;
-    g.add(m);
+    m.position.set(x, 0, z);
+    m.rotation.y = ry;
+    m.updateMatrix();
+    geos.push(m.geometry.applyMatrix4(m.matrix));
+  }
+  if (geos.length) {
+    const mesh = new Mesh(mergeGeometries(geos), paperMat(color));
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    g.add(mesh);
   }
   return g;
 }

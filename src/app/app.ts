@@ -10,6 +10,7 @@ import { Sparkles } from '../render/sparkles.js';
 import { Desk, DeskSource } from '../xr/desk.js';
 import { HandTracker } from '../xr/hands.js';
 import { HandVisuals } from '../xr/hand-visual.js';
+import { PerfHud } from '../ui/perf-hud.js';
 
 export interface Scene {
   readonly name: string;
@@ -41,8 +42,8 @@ export class App {
   time = 0;
   /** scene constructors; `setScene('free:cup')` passes 'cup' as the argument */
   sceneFactory: Record<string, (arg?: string) => Scene> = {};
-  /** scene to start when an XR session begins */
-  firstScene = 'story';
+  /** scene to start when an XR session begins (re-evaluated every session) */
+  firstScene: () => string = () => 'story';
   /** handlers for desk placement changes */
   onDeskPlaced: ((src: DeskSource) => void)[] = [];
   /** frame counter for perf sampling */
@@ -50,6 +51,7 @@ export class App {
   /** game speed multiplier (automated tests only: ?ts=3) */
   timeScale = Number(new URLSearchParams(location.search).get('ts')) || 1;
   private lastSession: XRSession | undefined;
+  private perf: PerfHud | null = null;
 
   constructor(readonly world: World) {
     world.scene.add(this.root);
@@ -62,6 +64,7 @@ export class App {
     };
     this.applySettings();
     this.quietBuiltInInput();
+    if (new URLSearchParams(location.search).get('stats') === '1') this.perf = new PerfHud(this);
     world.visibilityState.subscribe((v) => this.onVisibility(v));
   }
 
@@ -117,7 +120,7 @@ export class App {
       this.world.renderer.xr.setFoveation?.(0.5);
       document.body.classList.add('in-xr');
       // first frames of the session: let the desk settle, then begin
-      this.setScene(this.firstScene);
+      this.setScene(this.firstScene());
     }
   }
 
@@ -157,6 +160,7 @@ export class App {
     this.scene?.update(dt, time);
 
     this.handVisuals.update(this.hands, this.headPos, () => false);
+    this.perf?.update(rawDt);
     this.sparkles.update(dt, this.headQuat);
     this.audio.setListener(this.headPos, this.headQuat);
   }

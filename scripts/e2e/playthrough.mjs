@@ -4,7 +4,7 @@
  * heart, turns every page and opens the final letter.
  *   node scripts/e2e/playthrough.mjs [quest3|glasses] [startChapter]
  */
-import { launch, frames, movePinchTo, pinchAt, setPinch, shot, sleep } from './harness.mjs';
+import { launch, frames, movePinchTo, pinchAt, setPinch, shot, sleep, throwToward } from './harness.mjs';
 
 const device = process.argv[2] ?? 'quest3';
 const chapter = process.argv[3] ?? '';
@@ -82,17 +82,9 @@ for (;;) {
     case 'throw': {
       await snap('plane-alive');
       await carry(targets.obj, [targets.obj[0], targets.obj[1] + 0.06, targets.obj[2] + 0.05], 0.02);
-      // fling towards the book: one big jump between frames reads as a fast throw
+      // fling towards the book
       const from = await page.evaluate(() => window.__app.hands.right.pinchPoint.toArray());
-      await page.evaluate(({ d }) => {
-        const dev = window.__xrdevice.hands.right;
-        dev.position.x += d[0];
-        dev.position.y += d[1];
-        dev.position.z += d[2];
-      }, { d: [(targets.to[0] - from[0]) * 0.25, (targets.to[1] - from[1]) * 0.25 + 0.03, (targets.to[2] - from[2]) * 0.25] });
-      await frames(page, 1);
-      await page.evaluate(() => window.__xrdevice.hands.right.updatePinchValue(0));
-      await frames(page, 2);
+      await throwToward(page, R, [targets.to[0] - from[0], targets.to[1] - from[1] + 0.15, targets.to[2] - from[2]], 1.6, 3);
       await frames(page, 20);
       await snap('plane-thrown');
       break;

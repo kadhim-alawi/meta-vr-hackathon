@@ -30,7 +30,8 @@ async function main(): Promise<void> {
     viewer: (arg) => new ViewerScene(app, arg),
   };
   // first-timers go straight into the story; returning players get the hub
-  app.firstScene = params.get('scene') ?? (app.save.hasProgress ? 'menu' : 'story');
+  const forced = params.get('scene');
+  app.firstScene = () => forced ?? (app.save.hasProgress ? 'menu' : 'story');
 
   world.registerSystem(GameSystem, { priority: 20 });
   world.getSystem(GameSystem)!.app = app;

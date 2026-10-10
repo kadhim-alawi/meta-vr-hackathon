@@ -93,22 +93,73 @@ export async function shot(page, file) {
  * Pinch so that the *closed* fingertips meet at a world position (the
  * emulated pinch pose moves the fingertip midpoint as the fingers close).
  */
-export async function pinchAt(page, side, target) {
+const pinchOffsets = {};
+
+/** Measure (once, away from everything) how far the fingertip midpoint moves when pinching. */
+async function pinchOffset(page, side) {
+  if (pinchOffsets[side]) return pinchOffsets[side];
+  const safe = [side === 'right' ? 0.45 : -0.45, 1.45, 0.25];
+  await movePinchTo(page, side, safe);
   const offset = await page.evaluate(async (side) => {
     const h = window.__app.hands[side];
     const dev = window.__xrdevice.hands[side];
     const p0 = h.pinchPoint.clone();
-    dev.setPinchValueImmediate ? dev.setPinchValueImmediate(1) : dev.updatePinchValue(1);
-    await new Promise((r) => setTimeout(r, 250));
+    dev.setPinchValueImmediate(1);
+    await new Promise((r) => setTimeout(r, 300));
     const p1 = h.pinchPoint.clone();
-    dev.setPinchValueImmediate ? dev.setPinchValueImmediate(0) : dev.updatePinchValue(0);
-    await new Promise((r) => setTimeout(r, 250));
+    dev.setPinchValueImmediate(0);
+    await new Promise((r) => setTimeout(r, 300));
     return [p1.x - p0.x, p1.y - p0.y, p1.z - p0.z];
   }, side);
+  pinchOffsets[side] = offset;
+  return offset;
+}
+
+/**
+ * Pinch so that the *closed* fingertips meet at a world position (the
+ * emulated pinch pose moves the fingertip midpoint as the fingers close).
+ */
+export async function pinchAt(page, side, target) {
+  const offset = await pinchOffset(page, side);
+  await movePinchTo(page, side, [target[0] - offset[0], target[1] - offset[1] + 0.04, target[2] - offset[2]]);
   await movePinchTo(page, side, [target[0] - offset[0], target[1] - offset[1], target[2] - offset[2]]);
   for (const v of [0.3, 0.6, 1]) {
     await page.evaluate(({ side, v }) => window.__xrdevice.hands[side].updatePinchValue(v), { side, v });
     await frames(page, 2);
   }
   await frames(page, 3);
+}
+
+/**
+ * A throw performed inside the page across consecutive frames (round-trips
+ * from the test runner are too slow to produce a realistic hand velocity).
+ */
+export async function throwToward(page, side, dir, speed = 1.6, framesN = 5) {
+  await page.evaluate(
+    async ({ side, dir, speed, framesN }) => {
+      const app = window.__app;
+      const dev = window.__xrdevice.hands[side];
+      const len = Math.hypot(...dir) || 1;
+      const u = dir.map((v) => v / len);
+      const nextFrame = (n) =>
+        new Promise((res) => {
+          const target = app.frames + n;
+          const poll = () => (app.frames >= target ? res() : setTimeout(poll, 1));
+          poll();
+        });
+      let last = performance.now();
+      for (let i = 0; i < framesN; i++) {
+        const now = performance.now();
+        const dt = Math.max(0.011, (now - last) / 1000);
+        last = now;
+        dev.position.x += u[0] * speed * dt;
+        dev.position.y += u[1] * speed * dt;
+        dev.position.z += u[2] * speed * dt;
+        await nextFrame(1);
+      }
+      dev.setPinchValueImmediate(0);
+      await nextFrame(2);
+    },
+    { side, dir, speed, framesN },
+  );
 }

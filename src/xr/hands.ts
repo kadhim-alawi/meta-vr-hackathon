@@ -70,6 +70,7 @@ export class HandState {
   readonly palmNormal = new Vector3(0, -1, 0);
   /** hand orientation frame (x: thumb side, y: back of hand, z: towards wrist) */
   readonly orientation = new Quaternion();
+  /** smoothed palm velocity (world, m/s) */
   readonly velocity = new Vector3();
   /** target ray (system pointer) for point-and-pinch */
   readonly rayOrigin = new Vector3();
@@ -116,30 +117,41 @@ export class HandState {
     return this.source !== 'none';
   }
 
-  /** Average velocity over the last ~90 ms — good for throws. */
-  throwVelocity(out: Vector3, now: number, window = 0.09): Vector3 {
-    let newest: { p: Vector3; t: number } | null = null;
-    let oldest: { p: Vector3; t: number } | null = null;
-    for (const h of this.hist) {
-      if (h.t < 0 || now - h.t > window + 0.05) continue;
-      if (!newest || h.t > newest.t) newest = h;
-      if (!oldest || h.t < oldest.t) oldest = h;
+  /**
+   * Release velocity for throws: the fastest stretch of hand motion in the
+   * last ~250 ms. Hands decelerate as fingers open, so the plain latest
+   * velocity under-reports a throw.
+   */
+  throwVelocity(out: Vector3, now: number, window = 0.25): Vector3 {
+    const recent = this.hist.filter((h) => h.t >= 0 && now - h.t <= window).sort((a, b) => a.t - b.t);
+    let best = -1;
+    for (let i = 1; i < recent.length; i++) {
+      const dt = recent[i].t - recent[i - 1].t;
+      if (dt < 1e-3) continue;
+      this.inst.subVectors(recent[i].p, recent[i - 1].p).divideScalar(dt);
+      const sp = this.inst.lengthSq();
+      if (sp > best) {
+        best = sp;
+        out.copy(this.inst);
+      }
     }
-    if (!newest || !oldest || newest.t - oldest.t < 0.02) return out.copy(this.velocity);
-    return out.copy(newest.p).sub(oldest.p).divideScalar(newest.t - oldest.t);
+    if (best < 0) out.copy(this.velocity);
+    return out;
   }
 
   /** @internal */
   _record(now: number, dt: number): void {
+    // Track the palm, not the fingertips: opening the fingers to release a
+    // throw moves the fingertip midpoint and would fake a flick.
     const h = this.hist[this.histIdx];
-    h.p.copy(this.pinchPoint);
+    h.p.copy(this.palm);
     h.t = now;
     this.histIdx = (this.histIdx + 1) % HISTORY;
     if (this.hasLast && dt > 0) {
-      this.inst.subVectors(this.pinchPoint, this.lastPinchPoint).multiplyScalar(1 / dt);
+      this.inst.subVectors(this.palm, this.lastPinchPoint).multiplyScalar(1 / dt);
       this.velocity.lerp(this.inst, damp(18, dt));
     }
-    this.lastPinchPoint.copy(this.pinchPoint);
+    this.lastPinchPoint.copy(this.palm);
     this.hasLast = true;
   }
 

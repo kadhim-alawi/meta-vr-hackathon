@@ -76,6 +76,8 @@ export class Foldling {
   private handQ0 = new Quaternion();
   private q0 = new Quaternion();
   readonly velocity = new Vector3();
+  /** desk-space velocity at the last release (debug) */
+  readonly lastRelease = new Vector3();
   private moveFrom = new Vector3();
   private moveTo = new Vector3();
   private moveT = 0;
@@ -437,6 +439,7 @@ export class Foldling {
     this.facing = this.faceGoal = e.y;
     this.mode = 'falling';
     this.velocity.copy(v);
+    this.lastRelease.copy(v);
     if (this.onRelease) this.onRelease(v);
   }
 
@@ -458,7 +461,22 @@ export class Foldling {
       this.mode = 'idle';
       this.app.audio.rustle(this.app.fromDesk(this.group.position), 0.35);
       this.hop(0.012);
+      this.stayOnDesk();
     }
+  }
+
+  /** Desk area creatures may roam (desk-local x/z). */
+  static readonly BOUNDS = { x0: -0.5, x1: 0.5, z0: -0.62, z1: 0.3 };
+
+  /** Dropped or flown off the desk? Hop back on. */
+  stayOnDesk(): void {
+    const b = Foldling.BOUNDS;
+    const p = this.group.position;
+    if (p.x >= b.x0 && p.x <= b.x1 && p.z >= b.z0 && p.z <= b.z1) return;
+    const back = new Vector3(clamp(p.x, b.x0 + 0.08, b.x1 - 0.08), 0, clamp(p.z, b.z0 + 0.1, b.z1 - 0.05));
+    back.y = this.groundAt(back);
+    this.chirp('curious', 2);
+    void this.moveToPos(back, 0.9, 0.12);
   }
 
   /** Height of the highest surface under a desk-local point (0 = desk). */
@@ -476,25 +494,93 @@ export class Foldling {
   homeTarget: Vector3 | null = null;
   onLand: ((hitTarget: boolean) => void) | null = null;
 
-  private updateFlight(dt: number): void {
+  /** Curved flight from the throw into a target (story beats must land). */
+  private path: { p0: Vector3; p1: Vector3; p2: Vector3; t: number; dur: number } | null = null;
+
+  /** Launch along a curve that starts in the throw direction and ends at `target`. */
+  flyTo(target: Vector3, throwVel: Vector3): void {
+    const p0 = this.group.position.clone();
+    const dir = throwVel.clone();
+    if (dir.lengthSq() < 1e-4) dir.set(0, 0.3, -1);
+    dir.normalize();
+    const dist = p0.distanceTo(target);
+    const p1 = p0.clone().addScaledVector(dir, dist * 0.55);
+    p1.y = Math.max(p1.y, Math.max(p0.y, target.y) + 0.12);
+    this.path = { p0, p1, p2: target.clone(), t: 0, dur: clamp(dist / 1.0, 0.5, 1.6) };
+    this.mode = 'flying';
+  }
+
+  private updatePath(dt: number): void {
+    const P = this.path!;
+    P.t = Math.min(1, P.t + dt / P.dur);
+    const t = P.t;
+    const u = 1 - t;
+    // quadratic Bézier position and tangent
+    this.prevPos.copy(this.group.position);
+    this.group.position
+      .copy(P.p0)
+      .multiplyScalar(u * u)
+      .addScaledVector(P.p1, 2 * u * t)
+      .addScaledVector(P.p2, t * t);
+    this.velocity.subVectors(this.group.position, this.prevPos).divideScalar(Math.max(dt, 1e-4));
     const v = this.velocity;
-    const speed = v.length();
+    if (v.lengthSq() > 1e-6) {
+      const yaw = Math.atan2(-v.x, -v.z);
+      const pitch = Math.atan2(v.y, Math.hypot(v.x, v.z));
+      const bank = clamp(-angleDelta(this.facing, yaw) * 4, -0.6, 0.6);
+      this.facing = yaw;
+      this.group.rotation.set(pitch, yaw, bank, 'YXZ');
+    }
+    if (t >= 1) {
+      this.path = null;
+      this.mode = 'scripted';
+      this.onLand?.(true);
+    }
+  }
+
+  private updateFlight(dt: number): void {
+    if (this.path) {
+      this.updatePath(dt);
+      return;
+    }
+    // sub-step so fast throws (or slow frames) can't tunnel through the target
+    const steps = Math.max(1, Math.ceil(dt / 0.02));
+    const h = dt / steps;
+    for (let i = 0; i < steps && this.mode === 'flying'; i++) this.flightStep(h);
+  }
+
+  private prevPos = new Vector3();
+  private seg = new Vector3();
+
+  private flightStep(dt: number): void {
+    const v = this.velocity;
+    let speed = v.length();
     // simple glider: gravity, lift ∝ speed², drag
     v.y -= 1.2 * dt;
     v.y += Math.min(0.9, speed * speed * 0.35) * dt;
     v.multiplyScalar(Math.exp(-0.25 * dt));
     if (this.homeTarget) {
+      // a graceful, visible flight: steer towards the target at a calm speed
       this.tmp.subVectors(this.homeTarget, this.group.position);
-      const dist = this.tmp.length();
-      this.tmp.normalize().multiplyScalar(Math.max(speed, 0.9));
-      v.lerp(this.tmp, clamp(damp(2.4, dt), 0, 1));
-      if (dist < 0.05) {
+      this.tmp.normalize().multiplyScalar(clamp(speed, 0.9, 1.5));
+      v.lerp(this.tmp, clamp(damp(3, dt), 0, 1));
+      speed = v.length();
+    }
+    this.prevPos.copy(this.group.position);
+    this.group.position.addScaledVector(v, dt);
+    if (this.homeTarget) {
+      // swept hit test: distance from the target to this step's segment
+      this.seg.subVectors(this.group.position, this.prevPos);
+      const l2 = this.seg.lengthSq();
+      const t = l2 > 0 ? clamp(this.tmp.subVectors(this.homeTarget, this.prevPos).dot(this.seg) / l2, 0, 1) : 0;
+      const closest = this.tmp.copy(this.prevPos).addScaledVector(this.seg, t);
+      if (closest.distanceTo(this.homeTarget) < 0.07) {
+        this.group.position.copy(closest);
         this.mode = 'scripted';
         this.onLand?.(true);
         return;
       }
     }
-    this.group.position.addScaledVector(v, dt);
     // point the nose along the velocity (nose is −z in the pose)
     if (speed > 0.05) {
       const yaw = Math.atan2(-v.x, -v.z);
@@ -510,7 +596,8 @@ export class Foldling {
       this.group.rotation.set(0, this.facing, 0);
       this.mode = 'idle';
       this.app.audio.rustle(this.app.fromDesk(this.group.position), 0.5);
-      this.onLand?.(false);
+      if (this.onLand) this.onLand(false);
+      else this.stayOnDesk();
     }
   }
 

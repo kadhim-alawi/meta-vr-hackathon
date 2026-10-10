@@ -318,10 +318,7 @@ export class StoryScene implements Scene {
       const along = vel.dot(toBook);
       if (along > 0.35) {
         this.stage.hideHint();
-        plane.homeTarget = coverTop(new Vector3());
-        const v = vel.clone();
-        if (v.length() < 1.1) v.setLength(1.1);
-        plane.launch(v);
+        plane.flyTo(coverTop(new Vector3()), vel);
         this.app.audio.whoosh(this.app.fromDesk(plane.group.position), 0.6, true);
       }
     };
@@ -341,11 +338,11 @@ export class StoryScene implements Scene {
         // the plane gets impatient and flies on its own
         nudged = true;
         this.stage.showHint('The plane got impatient!');
-        plane.homeTarget = coverTop(new Vector3());
-        plane.launch(new Vector3(0, 0.6, -1.1));
+        plane.flyTo(coverTop(new Vector3()), new Vector3(0, 0.6, -1.1));
       }
       return hit;
     });
+    this.beat('talk');
     plane.onRelease = null;
     plane.onLand = null;
     plane.homeTarget = null;
@@ -408,6 +405,7 @@ export class StoryScene implements Scene {
       if (boat.group.position.distanceTo(startDesk) < 0.085) placed = true;
     };
     await s.until(() => placed);
+    this.beat('talk');
     boat.onRelease = null;
     this.ring.visible = false;
     boat.grabbable = false;
@@ -477,6 +475,7 @@ export class StoryScene implements Scene {
       kit.group.position.copy(deck());
     });
     await s.until(() => progress >= 1);
+    this.beat('talk');
     off();
     wind.stop();
     water.stop();
@@ -575,6 +574,7 @@ export class StoryScene implements Scene {
       void dt;
     });
     await s.until(() => watered.every((w) => w >= 0.7));
+    this.beat('talk');
     off();
     pour.stop();
     await s.wait(0.6);
@@ -648,6 +648,7 @@ export class StoryScene implements Scene {
       wind.set(clamp(spin / 10, 0, 0.8), 0.7 + spin / 14);
     });
     await s.until(() => lift >= 1);
+    this.beat('talk');
     off();
     wind.stop();
     this.stage.hideHint();
@@ -702,6 +703,7 @@ export class StoryScene implements Scene {
       if (!given && s.time - start > 40 && heart.mode === 'idle') given = true;
       return given;
     });
+    this.beat('talk');
     heart.onRelease = null;
     this.ring.visible = false;
     this.stage.hideHint();
@@ -791,6 +793,7 @@ export class StoryScene implements Scene {
       if (s.time - startOpen > 30) opened = true;
       return opened;
     });
+    this.beat('talk');
     this.stage.hideHint();
     this.app.audio.rustle(this.app.fromDesk(env.position), 0.9);
     this.app.audio.alive(this.app.fromDesk(env.position));

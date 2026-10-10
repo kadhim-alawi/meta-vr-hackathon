@@ -1,5 +1,5 @@
-import { Vec2, dist } from '../geom.js';
-import { ModelDef, along, alongXY, onto, ontoXY, viewToPaper } from '../model.js';
+import { Vec2 } from '../geom.js';
+import { ModelDef, along, alongXY, ontoXY, viewToPaper } from '../model.js';
 
 // A4-ish sheet, nose pointing away from the player (+y in the folded frame).
 const W = 0.72;
@@ -14,20 +14,8 @@ const NOSE = P(0, hh);
 const TL = P(-hw, hh);
 const TR = P(hw, hh);
 const BL = P(-hw, -hh);
-// Points on the long edges where the first corner folds end.
-const EL = P(-hw, hh - hw);
-const ER = P(hw, hh - hw);
 // keel depth: how far the wing crease sits from the centre line
 const KEEL = 0.075;
-
-/** Where an edge point lands when folded onto the centre line about the nose. */
-const toCentre =
-  (q: Vec2) =>
-  (s: Parameters<Parameters<typeof ontoXY>[1]>[0]): Vec2 => {
-    const n = s.foldedPoint(NOSE);
-    const g = s.foldedPoint(q);
-    return [n[0], n[1] - dist(n, g)];
-  };
 
 export const plane: ModelDef = {
   id: 'plane',
@@ -53,18 +41,6 @@ export const plane: ModelDef = {
         const n = s.foldedPoint(NOSE);
         return [n[0], n[1] - hw];
       }),
-    },
-    {
-      kind: 'fold',
-      hint: 'Fold the slanted edge to the middle.',
-      grab: EL,
-      line: ontoXY(EL, toCentre(EL)),
-    },
-    {
-      kind: 'fold',
-      hint: 'And the other side.',
-      grab: ER,
-      line: ontoXY(ER, toCentre(ER)),
     },
     {
       kind: 'fold',
@@ -116,5 +92,3 @@ export const plane: ModelDef = {
   alive: 'glider',
 };
 
-export const _planePoints = { NOSE, TL, TR, EL, ER, BL };
-void onto;

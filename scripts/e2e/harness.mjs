@@ -27,7 +27,7 @@ export function serve(dir = 'dist', port = 4173) {
   return new Promise((resolve) => server.listen(port, () => resolve(server)));
 }
 
-export async function launch(query, { width = 1280, height = 900 } = {}) {
+export async function launch(query, { width = 720, height = 540 } = {}) {
   const server = await serve();
   const browser = await chromium.launch({
     args: ['--enable-webgl', '--use-gl=angle', '--use-angle=swiftshader', '--ignore-gpu-blocklist', '--enable-unsafe-swiftshader'],
@@ -37,7 +37,12 @@ export async function launch(query, { width = 1280, height = 900 } = {}) {
   page.on('console', (m) => logs.push(`[${m.type()}] ${m.text()}`));
   page.on('pageerror', (e) => logs.push(`[pageerror] ${e.message}\n${e.stack}`));
   await page.goto(`http://localhost:4173/?${query}`);
-  await page.waitForFunction(() => window.__app && window.__app.scene, null, { timeout: 60000 });
+  try {
+    await page.waitForFunction(() => window.__app && window.__app.scene, null, { timeout: 60000 });
+  } catch (e) {
+    console.log(logs.join('\n'));
+    throw e;
+  }
   const close = async () => {
     await browser.close();
     server.close();
@@ -82,4 +87,28 @@ export async function setPinch(page, side, value) {
 export async function shot(page, file) {
   fs.mkdirSync(path.dirname(file), { recursive: true });
   await page.screenshot({ path: file });
+}
+
+/**
+ * Pinch so that the *closed* fingertips meet at a world position (the
+ * emulated pinch pose moves the fingertip midpoint as the fingers close).
+ */
+export async function pinchAt(page, side, target) {
+  const offset = await page.evaluate(async (side) => {
+    const h = window.__app.hands[side];
+    const dev = window.__xrdevice.hands[side];
+    const p0 = h.pinchPoint.clone();
+    dev.setPinchValueImmediate ? dev.setPinchValueImmediate(1) : dev.updatePinchValue(1);
+    await new Promise((r) => setTimeout(r, 250));
+    const p1 = h.pinchPoint.clone();
+    dev.setPinchValueImmediate ? dev.setPinchValueImmediate(0) : dev.updatePinchValue(0);
+    await new Promise((r) => setTimeout(r, 250));
+    return [p1.x - p0.x, p1.y - p0.y, p1.z - p0.z];
+  }, side);
+  await movePinchTo(page, side, [target[0] - offset[0], target[1] - offset[1], target[2] - offset[2]]);
+  for (const v of [0.3, 0.6, 1]) {
+    await page.evaluate(({ side, v }) => window.__xrdevice.hands[side].updatePinchValue(v), { side, v });
+    await frames(page, 2);
+  }
+  await frames(page, 3);
 }

@@ -39,12 +39,16 @@ export class App {
   readonly headPos = new Vector3();
   readonly headQuat = new Quaternion();
   time = 0;
-  /** scenes can be built per mode */
-  sceneFactory: Record<string, () => Scene> = {};
+  /** scene constructors; `setScene('free:cup')` passes 'cup' as the argument */
+  sceneFactory: Record<string, (arg?: string) => Scene> = {};
+  /** scene to start when an XR session begins */
+  firstScene = 'story';
   /** handlers for desk placement changes */
   onDeskPlaced: ((src: DeskSource) => void)[] = [];
   /** frame counter for perf sampling */
   frames = 0;
+  /** game speed multiplier (automated tests only: ?ts=3) */
+  timeScale = Number(new URLSearchParams(location.search).get('ts')) || 1;
   private lastSession: XRSession | undefined;
 
   constructor(readonly world: World) {
@@ -57,7 +61,22 @@ export class App {
       for (const fn of this.onDeskPlaced) fn(src);
     };
     this.applySettings();
+    this.quietBuiltInInput();
     world.visibilityState.subscribe((v) => this.onVisibility(v));
+  }
+
+  /**
+   * We draw our own hands (occluders in MR, paper hands in VR) and our own
+   * pointer feedback, so IWSDK's default hand meshes and rays are turned off.
+   * Controller models stay on.
+   */
+  private quietBuiltInInput(): void {
+    const input = this.world.input;
+    input.visualAdapters.hand.left.toggleVisual(false);
+    input.visualAdapters.hand.right.toggleVisual(false);
+    for (const side of ['left', 'right'] as const) {
+      for (const kind of ['ray', 'grab', 'touch'] as const) input.multiPointers[side].toggleSubPointer(kind, false);
+    }
   }
 
   applySettings(): void {
@@ -74,11 +93,16 @@ export class App {
       this.mode = 'none';
       this.hands.attach(null);
       this.audio.music.stop();
+      this.lastSession = undefined;
+      this.desk.reset();
+      if (this.sceneFactory.idle) this.setScene('idle');
+      document.body.classList.remove('in-xr');
       return;
     }
     if (session && session !== this.lastSession) {
       this.lastSession = session;
       this.hands.attach(session);
+      this.quietBuiltInInput();
       const blend = session.environmentBlendMode;
       this.mode = blend === 'opaque' || !blend ? 'vr' : 'ar';
       if ((session as XRSession & { mode?: string }).mode === 'immersive-vr') this.mode = 'vr';
@@ -91,27 +115,33 @@ export class App {
         /* not supported */
       }
       this.world.renderer.xr.setFoveation?.(0.5);
+      document.body.classList.add('in-xr');
+      // first frames of the session: let the desk settle, then begin
+      this.setScene(this.firstScene);
     }
   }
 
-  setScene(name: string): void {
+  setScene(spec: string): void {
+    const [name, arg] = spec.split(':');
     const make = this.sceneFactory[name];
     if (!make) throw new Error(`unknown scene ${name}`);
-    this.pending = make;
+    this.pending = () => make(arg);
   }
 
   /** Called once per rendered frame by the game system. */
   update(dt: number, time: number, frame: XRFrame | undefined): void {
     this.time = time;
     this.frames++;
-    dt = Math.min(dt, 1 / 20);
+    // input runs on real time; the game clock may be sped up for tests
+    const rawDt = Math.min(dt, 1 / 20);
+    dt = rawDt * this.timeScale;
     const cam = this.world.camera;
     cam.getWorldPosition(this.headPos);
     cam.getWorldQuaternion(this.headQuat);
 
     const ref = this.world.renderer.xr.getReferenceSpace();
     const player = this.world.player;
-    this.hands.update(frame, ref, player, time, dt);
+    this.hands.update(frame, ref, player, time, rawDt);
     player.updateWorldMatrix(true, false);
     this.desk.update(frame, ref, { position: this.headPos, quaternion: this.headQuat }, this.hands, player.matrixWorld, this.mode === 'ar' ? 'ar' : 'vr', dt);
     this.desk.group.updateWorldMatrix(true, false);

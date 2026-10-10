@@ -1,0 +1,10 @@
+import { launch, sleep, shot, frames } from './harness.mjs';
+const ids = process.argv[2] ?? 'plane,whale,fan';
+const { page, close } = await launch(`emulate=quest3&autostart=vr&scene=viewer:${ids}`, { width: 720, height: 540 });
+await sleep(3000);
+await page.evaluate(() => { const d = window.__xrdevice; d.position.set(0, 1.0, -0.05); const p = -0.75; d.quaternion.set(Math.sin(p / 2), 0, 0, Math.cos(p / 2)); });
+await frames(page, 5);
+await shot(page, `test-results/pose-${ids.replace(/,/g, '-')}.png`);
+const info = await page.evaluate(() => window.__app.scene.stage.foldlings.map((f) => ({ id: f.def.id, hinges: f.sheet.state.hinges.length, size: f.size.toArray().map((v) => v.toFixed(3)), rot: f.body.rotation.toArray().slice(0, 3).map((v) => v.toFixed(2)) })));
+console.log(JSON.stringify(info));
+await close();

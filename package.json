@@ -12,7 +12,10 @@
     "reference:warmup": "iwsdk reference warmup",
     "typecheck": "tsc --noEmit",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "vitest run",
+    "models": "vite-node --config vitest.config.ts scripts/render-models.ts",
+    "e2e": "node scripts/e2e/playthrough.mjs"
   },
   "dependencies": {
     "@iwsdk/core": "1.0.1",
@@ -36,5 +39,7 @@
   },
   "engines": {
     "node": ">=20.19.0 <21.0.0-0 || >=22.12.0 <23.0.0-0 || >=24.0.0"
-  }
+  },
+  "description": "Foldlings: a hands-only mixed reality origami adventure for Meta Quest and Meta VR Glasses",
+  "license": "MIT"
 }

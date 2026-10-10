@@ -38,6 +38,8 @@ export class Environment {
   readonly deskDecor = new Group();
   private catcher: Mesh;
   private deskTop: Mesh;
+  /** the folding mat; scenes slide it aside when the book comes close */
+  readonly mat: Mesh;
   private lamp: PointLight;
 
   constructor(renderer: WebGLRenderer) {
@@ -67,6 +69,7 @@ export class Environment {
     mat.receiveShadow = true;
     mat.name = 'folding-mat';
     this.deskDecor.add(mat);
+    this.mat = mat;
 
     this.catcher = new Mesh(new PlaneGeometry(1.6, 1.2), new ShadowMaterial({ opacity: 0.32 }));
     this.catcher.rotation.x = -Math.PI / 2;

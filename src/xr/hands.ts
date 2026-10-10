@@ -80,6 +80,8 @@ export class HandState {
   pinching = false;
   pinchStarted = false;
   pinchEnded = false;
+  /** seconds since the current pinch began (0 when not pinching) */
+  pinchAge = 0;
   /** seconds the hand has been continuously tracked */
   trackedTime = 0;
   /** true while the system select (pinch/trigger) is held */
@@ -95,6 +97,15 @@ export class HandState {
   palmFlat = false;
   /** consumer can mark a pinch as used so others ignore it */
   claimedBy: unknown = null;
+
+  /**
+   * A pinch that may still grab something: just started, or started a moment
+   * ago and not yet used. The grace window forgives pinching a little off the
+   * target and sliding onto it.
+   */
+  get freshPinch(): boolean {
+    return this.pinching && !this.claimedBy && this.pinchAge < 0.4;
+  }
 
   constructor(side: Side) {
     this.side = side;
@@ -133,8 +144,9 @@ export class HandState {
   }
 
   /** @internal */
-  _updatePinchEdges(): void {
+  _updatePinchEdges(dt = 0): void {
     this.pinchStarted = this.pinching && !this.wasPinching;
+    this.pinchAge = this.pinching ? (this.pinchStarted ? 0 : this.pinchAge + dt) : 0;
     this.pinchEnded = !this.pinching && this.wasPinching;
     this.wasPinching = this.pinching;
     if (this.pinchEnded) this.claimedBy = null;
@@ -226,7 +238,7 @@ export class HandTracker {
       }
       hs.trackedTime += dt;
       hs._record(now, dt);
-      hs._updatePinchEdges();
+      hs._updatePinchEdges(dt);
     }
   }
 

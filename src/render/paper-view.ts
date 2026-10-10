@@ -22,6 +22,8 @@ import { FoldPlan, PaperState } from '../fold/paper.js';
 
 /** Thickness used to separate stacked layers (metres). */
 export const LAYER_GAP = 0.0007;
+/** Height of the bottom paper layer above the desk surface (metres). */
+export const PAPER_BASE = 0.0018;
 
 export interface PaperMaterialOptions {
   front: Texture;
@@ -173,7 +175,8 @@ export function paperUV(state: PaperState, q: Vec2): [number, number] {
 export function stackLift(state: PaperState): Map<number, number> {
   const h = state.stackHeights();
   const out = new Map<number, number>();
-  for (const [id, z] of h) out.set(id, z * LAYER_GAP + 0.0004);
+  // base lift keeps the bottom layer clear of the folding mat (at 0.6 mm)
+  for (const [id, z] of h) out.set(id, z * LAYER_GAP + PAPER_BASE);
   return out;
 }
 

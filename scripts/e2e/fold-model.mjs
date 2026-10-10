@@ -1,11 +1,11 @@
 /** Folds a whole model with the emulated right hand: node scripts/e2e/fold-model.mjs cup */
-import { launch, frames, movePinchTo, setPinch, shot, sleep } from './harness.mjs';
+import { launch, frames, movePinchTo, pinchAt, setPinch, shot, sleep } from './harness.mjs';
 
 const model = process.argv[2] ?? 'cup';
 const device = process.argv[3] ?? 'quest3';
 const { page, logs, close } = await launch(`emulate=${device}&autostart=vr&scene=lab&model=${model}`);
 const out = `test-results/fold-${model}`;
-await sleep(1500);
+console.log('launched'); await sleep(1500);
 // look down at the desk like a seated player
 await page.evaluate(() => {
   const d = window.__xrdevice;
@@ -13,7 +13,7 @@ await page.evaluate(() => {
   d.quaternion.set(Math.sin(pitch / 2), 0, 0, Math.cos(pitch / 2));
 });
 await frames(page, 30);
-await shot(page, `${out}/00-start.png`);
+await shot(page, `${out}/00-start.png`); console.log('start shot');
 
 let guard = 0;
 for (;;) {
@@ -26,15 +26,15 @@ for (;;) {
     await frames(page, 2);
   }
   if (info.phase === 'done') break;
-  const { path, step } = info;
+  const { path, step } = info; console.log('step', step, 'path', path.length, JSON.stringify(path[0]));
   // hover above the handle, then pinch on it
   await setPinch(page, 'right', 0);
-  await movePinchTo(page, 'right', [path[0][0], path[0][1] + 0.03, path[0][2]]);
-  await movePinchTo(page, 'right', path[0]);
-  await setPinch(page, 'right', 1);
+  await movePinchTo(page, 'right', [path[0][0], path[0][1] + 0.05, path[0][2]]);
+  await pinchAt(page, 'right', path[0]);
   const phase = await page.evaluate(() => window.__app.scene.fold.phase);
   if (phase !== 'drag') {
     console.log(`step ${step}: pinch did not grab (phase ${phase})`);
+    throw new Error('grab failed');
   }
   for (let i = 1; i < path.length; i++) {
     const p = path[i];

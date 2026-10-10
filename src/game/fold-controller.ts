@@ -105,9 +105,10 @@ export class FoldController {
     private audio: AudioEngine,
     private sparkles: Sparkles,
     seed = 1,
+    colors?: { front: string; back: string },
   ) {
     this.state = initialState(def);
-    this.sheet = new PaperSheet(def, this.state, S, seed);
+    this.sheet = new PaperSheet(def, this.state, S, seed, colors);
     this.group.add(this.flipper);
     this.flipper.add(this.sheet.view.group);
 
@@ -183,9 +184,9 @@ export class FoldController {
     this.targetAngle = step.unfold ? Math.PI * 0.92 : step.angle ?? Math.PI;
     this.computeAxis(step);
     this.events.emit('step', { index: this.stepIndex, step, hint: step.hint });
-    if (step.auto) {
+    if (step.auto || this.autoAll) {
       this.phase = 'auto';
-      this.timer = -0.35;
+      this.timer = this.autoAll ? -0.1 : -0.35;
       return;
     }
     this.phase = 'ready';
@@ -313,7 +314,7 @@ export class FoldController {
     this.sheet.view.setFoldAngle(0, 0);
     if (!this.inputEnabled) return;
     for (const h of hands.hands) {
-      if (!h.tracked || !h.pinchStarted || h.claimedBy) continue;
+      if (!h.tracked || !h.freshPinch) continue;
       this.toLocal(h.pinchPoint, this.tmp2);
       const near = this.tmp2.distanceTo(this.grabLocal) < GRAB_RADIUS;
       const onFlap = !near && this.pointOnFlap(this.tmp2);
@@ -407,7 +408,7 @@ export class FoldController {
   private updateAuto(dt: number): void {
     this.timer += dt;
     if (this.timer < 0) return;
-    const d = 0.75;
+    const d = this.autoAll ? 0.5 : 0.75;
     const t = Math.min(1, this.timer / d);
     this.angle = this.targetAngle * easeInOutCubic(t);
     this.sheet.view.setFoldAngle(this.angle, smooth01(t));
@@ -533,7 +534,7 @@ export class FoldController {
   private updateGuides(time: number): void {
     const show = this.phase === 'ready' || this.phase === 'drag';
     const step = this.currentStep;
-    if (!show || !step || step.auto) {
+    if (!show || !step || step.auto || this.autoAll) {
       this.hideGuides();
       return;
     }
@@ -608,6 +609,26 @@ export class FoldController {
     }
   }
 
+  /** Fold the rest of the model automatically (pause menu "skip"). */
+  skipAll(): void {
+    this.autoAll = true;
+    if (this.phase === 'ready' || this.phase === 'drag' || this.phase === 'revert') {
+      this.drag?.stop();
+      this.drag = null;
+      if (this.holder) this.holder.claimedBy = null;
+      this.holder = null;
+      this.hideGuides();
+      this.phase = 'auto';
+      this.timer = 0;
+      this.angle = 0;
+    }
+  }
+  private autoAll = false;
+
+  get done(): boolean {
+    return this.phase === 'done';
+  }
+
   /** Test/debug helper: world-space path a hand should follow for the current step. */
   debugPath(n = 12): { phase: FoldPhase; step: number; path: number[][] } {
     const path: number[][] = [];
@@ -626,10 +647,16 @@ export class FoldController {
     return { phase: this.phase, step: this.stepIndex, path };
   }
 
+  /** The sheet now belongs to someone else (a Foldling); don't dispose it. */
+  releaseSheet(): void {
+    this.sheetReleased = true;
+  }
+  private sheetReleased = false;
+
   dispose(): void {
     this.drag?.stop();
     this.hideGuides();
-    this.sheet.dispose();
+    if (!this.sheetReleased) this.sheet.dispose();
   }
 }
 

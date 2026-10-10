@@ -24,6 +24,7 @@ import { clamp, damp, easeInOutCubic, easeOutBack, spring } from '../core/util.j
 import { PopUp } from './popups.js';
 import { HandState } from '../xr/hands.js';
 import { paperFiber } from './kit.js';
+import { disposeObject } from '../render/dispose.js';
 
 export const PAGE_W = 0.22;
 export const PAGE_D = 0.28;
@@ -181,10 +182,22 @@ export class Book {
     this.phase = 'closing';
   }
 
+  /** Remove the book and free its textures and meshes (scene exit). */
+  dispose(): void {
+    this.group.removeFromParent();
+    disposeObject(this.group);
+    if (this.nextSpread) {
+      disposeObject(this.nextSpread.left);
+      disposeObject(this.nextSpread.right);
+    }
+  }
+
   private attach(spread: Spread): void {
     if (this.spread) {
       this.leftSurface.remove(this.spread.left);
       this.rightSurface.remove(this.spread.right);
+      disposeObject(this.spread.left);
+      disposeObject(this.spread.right);
     }
     this.spread = spread;
     this.leftSurface.add(spread.left);

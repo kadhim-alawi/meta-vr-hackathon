@@ -33,6 +33,7 @@ import { PAGE_Y, gardenSpread, hillSpread, nightSpread, streamSpread } from '../
 import { TextCard } from '../ui/text.js';
 import { Stage } from './stage.js';
 import { PauseMenu } from '../ui/pause.js';
+import { disposeObject } from '../render/dispose.js';
 
 const BOOK_FAR = new Vector3(0, 0, -0.42);
 const BOOK_NEAR = new Vector3(0, 0, -0.15);
@@ -49,8 +50,14 @@ export class StoryScene implements Scene {
   private title = new TextCard(0.34, 2400);
   private ring: Mesh;
   private hooks: ((dt: number, t: number) => void)[] = [];
+  /** teardown for props a chapter adds (run on exit, even mid-chapter) */
+  private cleanups: (() => void)[] = [];
   private tmp = new Vector3();
   private tmp2 = new Vector3();
+  /** scratch for per-frame hooks (never passed to helpers that use tmp/tmp2) */
+  private tmp3 = new Vector3();
+  private tmp4 = new Vector3();
+  private sparkleTint = new Color();
   private q = new Quaternion();
   /** current story beat, exposed for automated playthrough tests */
   private beatName = 'intro';
@@ -94,6 +101,7 @@ export class StoryScene implements Scene {
     );
     this.ring.rotation.x = -Math.PI / 2;
     this.ring.renderOrder = 8;
+    this.ring.visible = false;
   }
 
   enter(): void {
@@ -112,12 +120,15 @@ export class StoryScene implements Scene {
 
   exit(): void {
     this.script.cancel();
+    for (const fn of this.cleanups) fn();
+    this.cleanups.length = 0;
     this.pause.dispose();
     this.stage.dispose();
     this.kit.dispose();
     this.mo?.dispose();
-    this.book.group.removeFromParent();
+    this.book.dispose();
     this.ring.removeFromParent();
+    disposeObject(this.ring);
     this.title.mesh.removeFromParent();
     this.title.dispose();
   }
@@ -174,8 +185,8 @@ export class StoryScene implements Scene {
 
   private async bookFar(): Promise<void> {
     this.book.setSlot(BOOK_FAR, 0.32);
-    this.updateSurfaces();
     await this.script.wait(0.6);
+    this.updateSurfaces();
   }
 
   private say(text: string, who: 'kit' | 'mo' = 'kit'): Promise<void> {
@@ -236,7 +247,11 @@ export class StoryScene implements Scene {
     const ch = this.startChapter;
     if (ch <= 0) await this.prologue();
     else {
-      this.book.open(ch === 1 ? streamSpread() : ch === 2 ? gardenSpread() : ch === 3 ? hillSpread() : nightSpread());
+      const sp = ch === 1 ? streamSpread() : ch === 2 ? gardenSpread() : ch === 3 ? hillSpread() : nightSpread();
+      this.book.open(sp);
+      // stand Kit on the page straight away rather than in the spine
+      this.kit.group.position.copy(sp.kitStart);
+      this.app.audio.music.setMood('playful');
       await this.script.wait(1.2);
     }
     if (ch <= 1) await this.chapterStream();
@@ -417,7 +432,7 @@ export class StoryScene implements Scene {
     this.app.audio.splash(this.app.fromDesk(startDesk));
     this.app.sparkles.droplets(this.app.fromDesk(startDesk), new Vector3(0, 0.4, 0), 10);
     // Kit hops aboard
-    const deck = () => this.deskToBook(boat.group.position.clone().add(this.tmp.set(0, 0.006, 0.016)));
+    const deck = (out = new Vector3()) => this.deskToBook(this.tmp3.copy(boat.group.position).add(this.tmp4.set(0, 0.006, 0.016)), out);
     await s.guard(kit.hopTo(deck(), 0.6, 0.05));
     kit.setEmote('cheer');
     await this.say('All aboard! Now we just need some wind…');
@@ -467,12 +482,12 @@ export class StoryScene implements Scene {
       progress = Math.min(1, progress + push * dt * 0.38);
       wind.set(clamp(push * 1.2, 0, 1));
       if (push > 0.15 && Math.random() < 0.5) {
-        this.app.sparkles.drift(this.app.fromDesk(boat.group.position.clone().add(this.tmp.set(-0.05, 0.03, 0))), new Color(0xdff6ff), 0.04);
+        this.app.sparkles.drift(this.app.fromDesk(this.tmp3.copy(boat.group.position).add(this.tmp4.set(-0.05, 0.03, 0)), this.tmp3), this.sparkleTint.set(0xdff6ff), 0.04);
       }
       boat.group.position.lerpVectors(startDesk, endDesk, easeInOutCubic(progress));
       boat.group.position.y = startDesk.y + Math.sin(t * 3) * 0.002;
       boat.group.rotation.set(Math.sin(t * 2.3) * 0.05, Math.PI / 2, Math.sin(t * 1.7) * 0.06);
-      kit.group.position.copy(deck());
+      deck(kit.group.position);
     });
     await s.until(() => progress >= 1);
     this.beat('talk');
@@ -524,6 +539,11 @@ export class StoryScene implements Scene {
     waterDisc.rotation.x = -Math.PI / 2;
     waterDisc.visible = false;
     cup.group.add(waterDisc);
+    this.cleanups.push(() => {
+      waterDisc.removeFromParent();
+      waterDisc.geometry.dispose();
+      (waterDisc.material as MeshLambertMaterial).dispose();
+    });
     let filled = false;
     this.beat('dip', () => ({ obj: cup.centreLocal(new Vector3()), to: wellDesk }));
     const flowersDesk = sp.flowers.map((f) => {
@@ -533,6 +553,7 @@ export class StoryScene implements Scene {
     const watered = sp.flowers.map(() => 0);
     const pour = this.app.audio.noiseLoop(this.app.fromDesk(wellDesk), 'pour');
     const up = new Vector3();
+    const dropDir = new Vector3();
     const off = this.hook((dt) => {
       waterDisc.position.set(0, cup.size.y * 1.65, 0);
       if (!filled && cup.mode === 'held') {
@@ -554,9 +575,9 @@ export class StoryScene implements Scene {
         const tilt = Math.acos(clamp(up.y, -1, 1));
         if (tilt > 0.75) {
           // water falls from the cup lip
-          const lip = cup.group.position.clone().add(this.tmp.copy(up).multiplyScalar(cup.size.y * 1.5 * cup.s));
+          const lip = this.tmp3.copy(cup.group.position).add(this.tmp.copy(up).multiplyScalar(cup.size.y * 1.5 * cup.s));
           pouring = true;
-          if (Math.random() < 0.6) this.app.sparkles.droplets(this.app.fromDesk(lip), new Vector3(up.x * 0.3, -0.2, up.z * 0.3), 1);
+          if (Math.random() < 0.6) this.app.sparkles.droplets(this.app.fromDesk(lip, this.tmp4), dropDir.set(up.x * 0.3, -0.2, up.z * 0.3), 1);
           flowersDesk.forEach((fp, i) => {
             if (watered[i] >= 0.7) return;
             if (Math.hypot(lip.x - fp.x, lip.z - fp.z) < 0.055 && lip.y > fp.y && lip.y < fp.y + 0.2) {
@@ -578,7 +599,7 @@ export class StoryScene implements Scene {
     off();
     pour.stop();
     await s.wait(0.6);
-    waterDisc.removeFromParent();
+    waterDisc.visible = false;
     sp.butterfly.visible = true;
     this.stage.hideHint();
     this.app.audio.success(this.app.fromDesk(flowersDesk[1]));
@@ -636,7 +657,7 @@ export class StoryScene implements Scene {
         const holdingFan = fan.holder === h;
         power = Math.max(power, speed * (holdingFan ? 1 : 0.45) * clamp((0.4 - d) / 0.2, 0, 1));
         if (holdingFan && speed > 0.3 && Math.random() < 0.5) {
-          this.app.sparkles.drift(this.app.fromDesk(fan.group.position.clone().add(this.tmp.set(0, 0.04, 0))), new Color(0xe6f7ff), 0.05);
+          this.app.sparkles.drift(this.app.fromDesk(this.tmp3.copy(fan.group.position).add(this.tmp4.set(0, 0.04, 0)), this.tmp3), this.sparkleTint.set(0xe6f7ff), 0.05);
         }
       }
       spin += power * 9 * dt;
@@ -689,7 +710,7 @@ export class StoryScene implements Scene {
     this.remember(heart);
     await this.bookNear();
     await s.guard(heart.moveToPos(WAIT_SPOT, 0.7, 0.05));
-    const kitDesk = () => this.bookToDesk(kit.group.position.clone());
+    const kitDesk = (out = new Vector3()) => this.bookToDesk(kit.group.position, out);
     this.ring.position.copy(kitDesk()).setY(kitDesk().y + 0.003);
     this.ring.visible = true;
     this.stage.showHint('Give the heart to Kit.', 'pinch it and set it down beside Kit');
@@ -713,7 +734,7 @@ export class StoryScene implements Scene {
     heart.mode = 'scripted';
     // the heart floats above Kit's head and follows along
     const offFollow = this.hook(() => {
-      const p = kitDesk().add(this.tmp.set(0, 0.075, 0));
+      const p = kitDesk(this.tmp3).add(this.tmp4.set(0, 0.075, 0));
       heart.group.position.lerp(p, 0.12);
     });
     kit.setEmote('jump');
@@ -767,6 +788,7 @@ export class StoryScene implements Scene {
     // the envelope floats to the player
     const env = envelope();
     this.app.deskGroup.add(env);
+    this.cleanups.push(() => env.removeFromParent());
     env.position.copy(this.bookToDesk(kit.group.position.clone().add(this.tmp.set(0, 0.06, 0))));
     const dest = this.app.toDesk(this.app.headPos.clone()).add(this.tmp.set(0, -0.2, -0.0));
     dest.z = Math.min(dest.z - 0.28, 0.02);
@@ -812,6 +834,10 @@ export class StoryScene implements Scene {
     );
     card.mesh.position.copy(dest).add(this.tmp.set(0, 0.06, -0.02));
     this.app.deskGroup.add(card.mesh);
+    this.cleanups.push(() => {
+      card.mesh.removeFromParent();
+      card.dispose();
+    });
     card.opacity = 0;
     for (let t = 0; t < 1; t += 1 / 60) {
       card.opacity = t;
@@ -830,9 +856,8 @@ export class StoryScene implements Scene {
       card.opacity = 1 - t;
       await s.wait(1 / 60);
     }
-    card.mesh.removeFromParent();
-    card.dispose();
-    env.removeFromParent();
+    card.opacity = 0;
+    env.visible = false;
     this.book.close();
     this.kit.setEmote('wave');
     this.mo?.setEmote('wave');

@@ -19,6 +19,7 @@ import {
 import type { App } from '../app/app.js';
 import { clamp, damp, easeInOutCubic, seededRandom } from '../core/util.js';
 import { TextCard } from '../ui/text.js';
+import { disposeObject, markShared } from '../render/dispose.js';
 import { angleDelta } from './foldling.js';
 
 export type Emote = 'idle' | 'wave' | 'cheer' | 'sad' | 'think' | 'jump' | 'dance';
@@ -45,6 +46,7 @@ export class PaperCharacter {
   protected sayDur = 0;
   protected voice = 70;
   private tmp = new Vector3();
+  private voicePos = new Vector3();
   private q = new Quaternion();
   /** set to false to keep the speech bubble hidden (captions off) */
   captions = true;
@@ -116,7 +118,8 @@ export class PaperCharacter {
   /** Say a line; resolves when the bubble has been read. */
   say(text: string, minDur = 2.4): Promise<void> {
     this.bubble.set([{ text, size: 1.05 }], { tail: 'bottom', bg: '#fffaf0', radius: 0.12 });
-    const len = this.app.audio.babble(this.app.fromDesk(this.group.position), text, this.voice);
+    // characters live inside the book, so use the true world position
+    const len = this.app.audio.babble(this.group.getWorldPosition(this.voicePos), text, this.voice);
     this.sayDur = Math.max(minDur, text.length / 15 + 1.1, len + 0.8);
     this.sayT = 0;
     this.sayDone?.();
@@ -264,6 +267,7 @@ export class PaperCharacter {
   dispose(): void {
     this.group.removeFromParent();
     this.bubble.dispose();
+    disposeObject(this.group);
   }
 }
 
@@ -295,7 +299,7 @@ export function paperFiber(): CanvasTexture {
     img.data[i] = img.data[i + 1] = img.data[i + 2] = n;
   }
   g.putImageData(img, 0, 0);
-  fiber = new CanvasTexture(c);
+  fiber = markShared(new CanvasTexture(c));
   fiber.colorSpace = SRGBColorSpace;
   return fiber;
 }

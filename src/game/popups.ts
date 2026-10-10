@@ -24,13 +24,14 @@ import {
   SRGBColorSpace,
 } from '@iwsdk/core';
 import { paperFiber } from './kit.js';
+import { markShared } from '../render/dispose.js';
 import { clamp, easeOutBack, seededRandom } from '../core/util.js';
 
 const matCache = new Map<number, MeshLambertMaterial>();
 export function paperMat(color: number): MeshLambertMaterial {
   let m = matCache.get(color);
   if (!m) {
-    m = new MeshLambertMaterial({ color, map: paperFiber(), side: DoubleSide });
+    m = markShared(new MeshLambertMaterial({ color, map: paperFiber(), side: DoubleSide }));
     matCache.set(color, m);
   }
   return m;

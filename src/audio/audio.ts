@@ -34,6 +34,8 @@ export class AudioEngine {
   volumes = { master: 0.9, sfx: 1, music: 0.55, voice: 0.9 };
   private fwd = new Vector3();
   private up = new Vector3();
+  /** looping ambiences still playing, so a scene change can silence them */
+  private loops = new Set<Loop>();
 
   /** Must be called from a user gesture (button press / entering XR). */
   unlock(): void {
@@ -439,7 +441,7 @@ export class AudioEngine {
     n.start();
     lfo.start();
     let stopped = false;
-    return {
+    const loop: Loop = {
       set: (level: number, pitch = 1) => {
         if (stopped) return;
         const t = c.currentTime;
@@ -449,11 +451,19 @@ export class AudioEngine {
       stop: () => {
         if (stopped) return;
         stopped = true;
+        this.loops.delete(loop);
         g.gain.setTargetAtTime(0, c.currentTime, 0.15);
         n.stop(c.currentTime + 0.8);
         lfo.stop(c.currentTime + 0.8);
       },
     };
+    this.loops.add(loop);
+    return loop;
+  }
+
+  /** Fade out every looping ambience (on scene changes). */
+  stopLoops(): void {
+    for (const l of [...this.loops]) l.stop();
   }
 
   splash(pos: Pos): void {

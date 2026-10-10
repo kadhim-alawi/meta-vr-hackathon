@@ -11,6 +11,7 @@ import { AliveKind, ModelDef } from '../fold/model.js';
 import { PaperState } from '../fold/paper.js';
 import { PaperSheet } from '../render/paper-sheet.js';
 import { setPaperGlow } from '../render/paper-view.js';
+import { disposeObject } from '../render/dispose.js';
 import { HandState } from '../xr/hands.js';
 import { OpenFan, buildOpenFan } from '../render/fan-mesh.js';
 
@@ -217,6 +218,11 @@ export class Foldling {
 
   /** Hop/glide to a desk-local position. */
   moveToPos(to: Vector3, dur = 0.8, arc = 0.05): Promise<void> {
+    // the story can move a creature the player is holding: let go first
+    if (this.holder) {
+      if (this.holder.claimedBy === this) this.holder.claimedBy = null;
+      this.holder = null;
+    }
     this.mode = 'moving';
     this.moveFrom.copy(this.group.position);
     this.moveTo.copy(to);
@@ -442,7 +448,7 @@ export class Foldling {
   release(): void {
     const h = this.holder;
     this.holder = null;
-    if (h) h.claimedBy = null;
+    if (h && h.claimedBy === this) h.claimedBy = null;
     const v = new Vector3();
     if (h) {
       h.throwVelocity(v, this.app.time);
@@ -454,7 +460,8 @@ export class Foldling {
     // keep yaw only when put down
     const e = new Euler().setFromQuaternion(this.group.quaternion, 'YXZ');
     this.facing = this.faceGoal = e.y;
-    this.mode = 'falling';
+    // a tossed plane glides; everything else (and a plane set down) drops
+    this.mode = this.kind === 'glider' && v.lengthSq() > 0.25 ? 'flying' : 'falling';
     this.velocity.copy(v);
     this.lastRelease.copy(v);
     if (this.onRelease) this.onRelease(v);
@@ -637,8 +644,9 @@ export class Foldling {
   }
 
   dispose(): void {
-    if (this.holder) this.holder.claimedBy = null;
+    if (this.holder && this.holder.claimedBy === this) this.holder.claimedBy = null;
     this.group.removeFromParent();
+    if (this.fanMesh) disposeObject(this.fanMesh);
     this.sheet.dispose();
   }
 }

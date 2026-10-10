@@ -29,6 +29,7 @@ import { Vec2, apply, reflectPoint } from '../fold/geom.js';
 import { FoldStep, ModelDef, commitStep, grabPoint, initialState, planStep } from '../fold/model.js';
 import { FoldPlan, PaperState } from '../fold/paper.js';
 import { PaperSheet } from '../render/paper-sheet.js';
+import { disposeObject } from '../render/dispose.js';
 import { HandState, HandTracker } from '../xr/hands.js';
 import { Sparkles } from '../render/sparkles.js';
 
@@ -656,6 +657,10 @@ export class FoldController {
   dispose(): void {
     this.drag?.stop();
     this.hideGuides();
+    // the ghost borrows the sheet's geometry, so only its material is ours
+    this.ghostPivot.clear();
+    this.ghostMat.dispose();
+    for (const o of [this.handle, this.target, this.arc, this.creaseLine]) disposeObject(o);
     if (!this.sheetReleased) this.sheet.dispose();
   }
 }

@@ -45,6 +45,7 @@ export class Desk {
     this.anchor = null;
     this.anchorTried = false;
     this.settle = 0;
+    this.cancelCalibration();
   }
 
   /** Called every frame while in XR. */
@@ -151,6 +152,12 @@ export class Desk {
   /** Start listening for a flat palm laid on a surface. */
   beginPalmCalibration(): void {
     this.calibrating = true;
+    this.palmTimer = 0;
+  }
+
+  /** Stop listening for a palm (left the scene that asked for it). */
+  cancelCalibration(): void {
+    this.calibrating = false;
     this.palmTimer = 0;
   }
 

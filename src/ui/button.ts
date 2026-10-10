@@ -130,7 +130,7 @@ export class PokeButton {
     this.planePoint.setFromMatrixPosition(this.group.matrixWorld);
     const denom = this.normal.dot(this.ray.direction);
     if (Math.abs(denom) < 1e-4) return false;
-    const t = this.planePoint.clone().sub(this.ray.origin).dot(this.normal) / denom;
+    const t = (this.planePoint.dot(this.normal) - this.ray.origin.dot(this.normal)) / denom;
     if (t < 0 || t > 3) return false;
     this.hit.copy(this.ray.direction).multiplyScalar(t).add(this.ray.origin).applyMatrix4(this.inv);
     return Math.abs(this.hit.x) < this.opts.width / 2 && Math.abs(this.hit.y) < this.opts.height / 2;

@@ -165,7 +165,10 @@ export class MenuScene implements Scene {
         this.app.save.reset();
         this.app.setScene('menu');
       }, '#ffd9d2', 0.1);
-      this.addButton('Back', null, 0, -0.06, () => this.show('main'), undefined, 0.08, 0.035);
+      this.addButton('Back', null, 0, -0.06, () => {
+        this.app.desk.cancelCalibration();
+        this.show('main');
+      }, undefined, 0.08, 0.035);
     }
   }
 
@@ -176,8 +179,9 @@ export class MenuScene implements Scene {
     this.kit.update(dt, this.app.headPos);
     // panel faces the player
     this.panel.lookAt(this.app.headPos);
-    for (const b of [...this.buttons]) {
-      if (b.update(this.app.hands, dt)) break;
+    // a pressed button may rebuild the list, so stop at the first press
+    for (let i = 0; i < this.buttons.length; i++) {
+      if (this.buttons[i].update(this.app.hands, dt)) break;
     }
     if (this.app.desk.calibrating === false && this.stage.hint.opacity > 0.5 && this.current === 'settings') this.stage.hideHint();
   }
@@ -187,7 +191,7 @@ export class MenuScene implements Scene {
     this.clearButtons();
     this.stage.dispose();
     this.kit.dispose();
-    this.book.group.removeFromParent();
+    this.book.dispose();
     this.panel.removeFromParent();
     this.header.dispose();
   }

@@ -50,7 +50,7 @@ export class IdleScene implements Scene {
 
   exit(): void {
     this.stage.dispose();
-    this.book.group.removeFromParent();
+    this.book.dispose();
     this.app.env.mat.visible = true;
   }
 }

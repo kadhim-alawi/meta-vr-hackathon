@@ -45,15 +45,20 @@ export class PaperSheet {
   }
 
   setBlink(v: number): void {
-    if (Math.abs(v - this.blink) < 0.05 || this.marks.length === 0) return;
+    // three steps read as a blink and keep texture uploads to a few per blink
+    v = Math.round(v * 2) / 2;
+    if (v === this.blink || this.marks.length === 0) return;
     this.blink = v;
-    this.redraw();
+    this.redraw(true);
   }
 
-  redraw(): void {
+  /** Repaint the faces; `inkedOnly` skips a face that carries no eyes. */
+  redraw(inkedOnly = false): void {
     const creases = this.state.creases;
-    this.front.redraw(creases, this.marks.filter((m) => m.face === 'front'), this.blink);
-    this.back.redraw(creases, this.marks.filter((m) => m.face === 'back'), this.blink);
+    const front = this.marks.filter((m) => m.face === 'front');
+    const back = this.marks.filter((m) => m.face === 'back');
+    if (!inkedOnly || front.length) this.front.redraw(creases, front, this.blink);
+    if (!inkedOnly || back.length) this.back.redraw(creases, back, this.blink);
   }
 
   dispose(): void {

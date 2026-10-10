@@ -254,7 +254,8 @@ export function nightSpread(): NightSpread {
   win.position.set(0.017, 0.03, 0.0026);
   house.add(win);
   sp.add('right', house, 0.13, -0.04, 0.25);
-  sp.door = new Vector3(0.114, PAGE_Y, 0.0);
+  // just in front of the door on the house wall (house at z -0.04)
+  sp.door = new Vector3(0.114, PAGE_Y, -0.034);
   sp.window = new Vector3(0.147, PAGE_Y + 0.03, -0.035);
   const m = moon();
   m.position.y = 0.1;

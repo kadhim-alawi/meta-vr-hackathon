@@ -154,6 +154,9 @@ export class App {
       const make = this.pending;
       this.pending = null;
       this.scene?.exit();
+      // nothing a scene started should outlive it
+      this.audio.stopLoops();
+      this.desk.cancelCalibration();
       this.scene = make();
       this.scene.enter();
     }

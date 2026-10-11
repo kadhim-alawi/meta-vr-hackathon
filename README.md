@@ -48,7 +48,9 @@ return to the menu.
 - **Reasons to come back.** Daily fold and streak, a growing desk of Foldlings that remember you,
   and ten models to collect.
 - **FoV-aware.** Everything happens in one compact zone (mat, then the book slides close) that fits
-  the VR Glasses' roughly 70°×66° field of view.
+  the VR Glasses' field of view (37° left/right, 25° up, 43° down). `scripts/e2e/fov-check.mjs`
+  measures it: with the head tilted about 25° towards the desk, the paper, the book, the hints, the
+  menu tag and a waiting Foldling all stay inside those bounds.
 - **Accessible.** One-handed, either hand, seated. Captions are on by default. Every physical
   challenge has a fallback: drag instead of wave, the plane flies itself after a while, Kit fetches
   the heart, and pages can auto-turn. *Skip this fold* is always available.

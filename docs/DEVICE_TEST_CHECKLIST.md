@@ -47,7 +47,7 @@ Tunables are noted next to each item so fixes are quick.
 
 ## 6. Meta VR Glasses (no device yet)
 
-- [ ] In the desktop emulator, use `?emulate=glasses&autostart=ar` to check that the mat and book fit in the narrower field of view.
+- [ ] In the desktop emulator, use `?emulate=glasses&autostart=ar` to check that the mat and book fit in the narrower field of view. `node scripts/e2e/fov-check.mjs` reports the angles automatically (all key objects fit at a 25° downward head tilt; set `PITCH=-15` to try a more upright posture).
 
 ## 7. Submission video capture
 

@@ -3,7 +3,7 @@
  * page spans x ∈ [0, PAGE_W], the left page x ∈ [−PAGE_W, 0]; +z points at
  * the player. Named markers expose interaction spots to the story script.
  */
-import { BufferGeometry, Group, InstancedMesh, Matrix4, Mesh, MeshBasicMaterial, Object3D, PlaneGeometry, Vector3, BoxGeometry, CylinderGeometry } from '@iwsdk/core';
+import { BufferGeometry, CircleGeometry, Group, InstancedMesh, Matrix4, Mesh, MeshBasicMaterial, Object3D, PlaneGeometry, Vector3, BoxGeometry, CylinderGeometry } from '@iwsdk/core';
 import { PAGE_D, PAGE_W, Spread } from './book.js';
 import {
   Flower,
@@ -244,7 +244,30 @@ export function nightSpread(): NightSpread {
   const tints = [tint('left', -PAGE_W / 2), tint('right', PAGE_W / 2)];
   sp.add('left', hill(0.22, 0.05, 0x557a5a, 13), -0.11, -0.115, 0.0);
   sp.add('right', hill(0.22, 0.06, 0x4f7356, 14), 0.11, -0.12, 0.05);
-  // Mo's house
+  sp.add('left', tree(0.075, 0x4f8a55), -0.19, -0.075, 0.15);
+  sp.add('left', tree(0.06, 0x5c9e5a, true), -0.05, -0.085, 0.2);
+  const grassL = grassTufts(16, [PAGE_W - 0.03, PAGE_D - 0.08], 0x7fae6a, 41);
+  grassL.position.x = -PAGE_W / 2;
+  sp.left.add(grassL);
+  const grassR = grassTufts(12, [PAGE_W - 0.03, PAGE_D - 0.08], 0x7fae6a, 42, (x, z) => !(x > -0.05 && z < 0.02));
+  grassR.position.x = PAGE_W / 2;
+  sp.right.add(grassR);
+  // stepping stones from the left page to Mo's door (Kit's walk)
+  // (each page carries its own stones so they fold with it when the book closes;
+  // they sit under the night tint so they darken with the page)
+  const stones: Record<'left' | 'right', BufferGeometry[]> = { left: [], right: [] };
+  for (let i = 0; i < 8; i++) {
+    const t = i / 7;
+    const x = -0.13 + t * 0.235;
+    const z = 0.05 - t * 0.05 + Math.sin(t * Math.PI) * 0.025;
+    if (Math.abs(x) < 0.012) continue; // keep the spine clear
+    stones[x < 0 ? 'left' : 'right'].push(new CircleGeometry(0.008 + (i % 3) * 0.0015, 10).rotateX(-Math.PI / 2).translate(x, 0.0002, z));
+  }
+  for (const side of ['left', 'right'] as const) {
+    const path = new Mesh(mergeGeometries(stones[side]), paperMat(0xcbbfa8));
+    path.receiveShadow = true;
+    sp[side].add(path);
+  }
   const house = new Group();
   const walls = cutout(houseShape(0.075, 0.085), 0xe9d2b0, 0.002);
   house.add(walls);

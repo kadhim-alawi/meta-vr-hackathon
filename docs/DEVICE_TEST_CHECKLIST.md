@@ -29,7 +29,7 @@ Tunables are noted next to each item so fixes are quick.
 ## 3. Story beats
 
 - [ ] **Prologue**: fold the plane (4 folds), then a gentle toss toward the book flies it in and the book bursts open. Check the throw threshold `along > 0.35` in `src/scenes/story.ts`. A toss in the wrong direction should glide, land, and hop back to the mat.
-- [ ] **Stream**: pick up the boat and drop it on the glowing ring. Waving your open hand behind the sail moves it (about 8 s of waving; rate `push * dt * 0.38` in `chapterStream`), and so does pinching and dragging the boat.
+- [ ] **Stream**: pick up the boat and drop it on the glowing ring. Sweeping your open hand towards the boat from its left moves it (about 8 s of waving; rate `push * dt * 0.38` in `chapterStream`), and so does pinching and dragging the boat.
 - [ ] **Garden**: dip the cup into the well (it fills), then tip it over each of the 3 flowers and they bloom. Tune the tilt threshold `0.75` rad.
 - [ ] **Hill**: pick up the fan and wave it near the windmill until the basket lifts Kit to the cliff. It should take about 4–8 s with the fan, longer with a bare hand. Tune `(spin - 1) * 0.03` and the 20–40 cm falloff in `chapterHill`.
 - [ ] **Night**: give the heart to Kit, Mo comes out, the rain stops and the rainbow pops up.

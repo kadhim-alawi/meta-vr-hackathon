@@ -11,7 +11,7 @@ at the start). Keep head motion slow; seated.
 | 0:25–0:40 | Finish the plane (two quick folds and the wing lift); the plane glows, ink eyes appear, it chirps | "And whatever you fold…" |
 | 0:40–0:50 | Toss the plane; it loops into the book; the book bursts open and the pop-ups stand up | "…comes alive." |
 | 0:50–1:05 | Kit says hello; pick up the folded boat and set it on the river | Show Kit's speech bubble |
-| 1:05–1:20 | Wave your hand behind the sail; the boat crosses the spread with Kit aboard | "Wave to make wind." |
+| 1:05–1:20 | Sweep your open hand towards the boat from the left; it crosses the spread with Kit aboard | "Wave to make wind." |
 | 1:20–1:40 | Garden: dip the cup in the well, tilt to pour, flowers bloom one by one | |
 | 1:40–1:55 | Hill: fan wave, windmill spins, the basket lifts Kit up the cliff | |
 | 1:55–2:15 | Night: give the heart to Kit; Mo opens the door; the rain stops and the rainbow pops up | |

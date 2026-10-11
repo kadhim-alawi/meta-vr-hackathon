@@ -15,7 +15,8 @@ const MIME = {
   '.webmanifest': 'application/manifest+json',
 };
 
-export function serve(dir = 'dist', port = 4173) {
+/** Serve the build; port 0 picks a free port so several runs can share the machine. */
+export function serve(dir = 'dist', port = 0) {
   const root = path.resolve(dir);
   const server = http.createServer((req, res) => {
     const url = decodeURIComponent((req.url ?? '/').split('?')[0]);
@@ -36,7 +37,8 @@ export async function launch(query, { width = 720, height = 540 } = {}) {
   const logs = [];
   page.on('console', (m) => logs.push(`[${m.type()}] ${m.text()}`));
   page.on('pageerror', (e) => logs.push(`[pageerror] ${e.message}\n${e.stack}`));
-  await page.goto(`http://localhost:4173/?${query}`);
+  // each run gets its own port, so its own origin and fresh save data
+  await page.goto(`http://localhost:${server.address().port}/?${query}`);
   try {
     await page.waitForFunction(() => window.__app && window.__app.scene, null, { timeout: 60000 });
   } catch (e) {

@@ -429,16 +429,21 @@ export class StoryScene implements Scene {
     boat.mode = 'scripted';
     await s.guard(boat.moveToPos(startDesk, 0.35, 0.02));
     boat.mode = 'scripted';
-    boat.group.rotation.set(0, Math.PI / 2, 0);
-    boat.facing = Math.PI / 2;
+    // the paper boat is a flat silhouette: keep it side-on to the player and
+    // let it sail across, bow first along +x
+    boat.group.rotation.set(0, 0, 0);
+    boat.facing = 0;
     this.app.audio.splash(this.app.fromDesk(startDesk));
     this.app.sparkles.droplets(this.app.fromDesk(startDesk), new Vector3(0, 0.4, 0), 10);
     // Kit hops aboard
-    const deck = (out = new Vector3()) => this.deskToBook(this.tmp3.copy(boat.group.position).add(this.tmp4.set(0, 0.006, 0.016)), out);
+    // Kit rides at the stern, just behind the hull, so the hull hides Kit's
+    // feet and the sail stays in view
+    const stern = -0.3 * boat.size.x * boat.s;
+    const deck = (out = new Vector3()) => this.deskToBook(this.tmp3.copy(boat.group.position).add(this.tmp4.set(stern, 0.004, -0.02)), out);
     await s.guard(kit.hopTo(deck(), 0.6, 0.05));
     kit.setEmote('cheer');
     await this.say('All aboard! Now we just need some wind…');
-    this.stage.showHint('Wave your hand behind the sail to blow it along!', 'or pinch the boat and pull it');
+    this.stage.showHint('Sweep your open hand towards the boat from the left to blow it along!', 'or pinch the boat and pull it');
 
     // sailing
     this.beat('wind', () => ({ at: boat.group.position.clone() }));
@@ -488,7 +493,7 @@ export class StoryScene implements Scene {
       }
       boat.group.position.lerpVectors(startDesk, endDesk, easeInOutCubic(progress));
       boat.group.position.y = startDesk.y + Math.sin(t * 3) * 0.002;
-      boat.group.rotation.set(Math.sin(t * 2.3) * 0.05, Math.PI / 2, Math.sin(t * 1.7) * 0.06);
+      boat.group.rotation.set(Math.sin(t * 2.3) * 0.05, 0, Math.sin(t * 1.7) * 0.06);
       deck(kit.group.position);
     });
     await s.until(() => progress >= 1);

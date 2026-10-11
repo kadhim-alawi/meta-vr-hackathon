@@ -44,7 +44,7 @@ export const cat: ModelDef = {
   id: 'cat',
   name: 'Kitten',
   blurb: 'Curious about everything you do.',
-  paper: { w: S, h: S, front: '#6d6f7d', back: '#f3efe8', pattern: 'stripes' },
+  paper: { w: S, h: S, front: '#9a9dae', back: '#f3efe8', pattern: 'stripes' },
   start: 'back',
   startAngle: Math.PI / 4,
   steps: [

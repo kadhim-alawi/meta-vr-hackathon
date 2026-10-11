@@ -142,6 +142,8 @@ jitter.
   tosses the plane into the book, places and sails the boat by waving, dips and pours the cup, fans
   the windmill, gives the heart, turns every page and opens the final letter, then saves screenshots
   under `test-results/`. The full run (prologue to hub) passes with no console errors.
+- `node scripts/e2e/modes.mjs`: pokes through the hub with an emulated fingertip into Free fold
+  (the puppy), the Daily fold and Settings, and checks the save data, the desk shelf and the streak.
 - `node scripts/e2e/perf.mjs`: draw calls and triangles per scene in an emulated session. The busiest
   scene (the garden spread) is about 170 draw calls and 25k triangles per frame for both eyes,
   including the shadow pass. Most scenes are lower.

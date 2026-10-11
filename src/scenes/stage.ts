@@ -3,9 +3,9 @@
  * the mat and waking it, the shelf where finished Foldlings live, and moving
  * the mat aside when the book needs the space.
  */
-import { Group, Vector3 } from '@iwsdk/core';
+import { Group, Quaternion, Vector3 } from '@iwsdk/core';
 import type { App } from '../app/app.js';
-import { damp } from '../core/util.js';
+import { clamp, damp } from '../core/util.js';
 import { Script } from '../core/script.js';
 import { ModelDef, runModel } from '../fold/model.js';
 import { FoldController } from '../game/fold-controller.js';
@@ -27,6 +27,8 @@ export class Stage {
   private matScale = 1;
   private matScaleGoal = 1;
   private tmp = new Vector3();
+  private viewV = new Vector3();
+  private viewQ = new Quaternion();
   surfaces: Surface[] = [];
   /** shelf slots used so far */
   private shelfUsed = 0;
@@ -157,11 +159,33 @@ export class Stage {
     f.faceTowards(new Vector3(0, 0, 0.4));
   }
 
+  /**
+   * FoV-aware placement: if a card (desk-local position, half size in
+   * metres) would sit outside a comfortable cone of this headset's actual
+   * field of view, slide it to the cone's edge. Wide Quest views leave it
+   * where it was authored; the narrower VR Glasses view pulls it in.
+   */
+  keepInView(pos: Vector3, halfW: number, halfH: number, comfort = 0.85): void {
+    const app = this.app;
+    const v = app.fromDesk(pos, this.viewV).sub(app.headPos).applyQuaternion(this.viewQ.copy(app.headQuat).invert());
+    const z = -v.z;
+    if (z < 0.15) return;
+    const f = app.fov;
+    const x = clamp(v.x, Math.min(0, -f.left * comfort * z + halfW), Math.max(0, f.right * comfort * z - halfW));
+    const y = clamp(v.y, Math.min(0, -f.down * comfort * z + halfH), Math.max(0, f.up * comfort * z - halfH));
+    if (x === v.x && y === v.y) return;
+    v.x = x;
+    v.y = y;
+    v.applyQuaternion(app.headQuat).add(app.headPos);
+    app.toDesk(v, pos);
+  }
+
   update(dt: number, time: number): void {
     // hint card: ease in/out and face the player
     this.hintAlpha += ((this.hintWanted ? 1 : 0) - this.hintAlpha) * damp(8, dt);
     this.hint.opacity = this.hintAlpha;
     this.hint.mesh.position.lerp(this.hintGoal, damp(6, dt));
+    if (this.hintAlpha > 0.05) this.keepInView(this.hint.mesh.position, this.hint.widthM / 2, this.hint.heightM / 2);
     this.hint.mesh.lookAt(this.app.headPos);
     // mat glide
     const mat = this.app.env.mat;

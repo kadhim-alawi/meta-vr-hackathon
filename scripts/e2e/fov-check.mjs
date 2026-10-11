@@ -3,6 +3,7 @@
 // extends from the view centre at the story's main beats.
 import { launch, sleep } from './harness.mjs';
 const PITCH = Number(process.env.PITCH ?? -25);
+// PITCH=-45 looks down at the mat the way a seated player folding paper does
 const BOUNDS = { left: 37, right: 37, up: 25, down: 43 };
 const checks = [
   { scene: 'story:0', wait: 9000, label: 'prologue (mat + closed book far)' },
@@ -12,11 +13,20 @@ const checks = [
 for (const c of checks) {
   const { page, close } = await launch(`emulate=glasses&autostart=ar&scene=${c.scene}&ts=3`, { width: 320, height: 240 });
   await sleep(800);
-  await page.evaluate((p) => {
-    const d = window.__xrdevice;
-    const a = (p * Math.PI) / 180;
-    d.quaternion.set(Math.sin(a / 2), 0, 0, Math.cos(a / 2));
-  }, PITCH);
+  await page.evaluate(
+    ({ p, B }) => {
+      const d = window.__xrdevice;
+      const a = (p * Math.PI) / 180;
+      d.quaternion.set(Math.sin(a / 2), 0, 0, Math.cos(a / 2));
+      // IWER renders the Glasses through a full-size projection plus a mask;
+      // the device itself reports the narrow projection, so feed it in here
+      const app = window.__app;
+      app.updateFov = () => {};
+      const t = (deg) => Math.tan((deg * Math.PI) / 180);
+      Object.assign(app.fov, { up: t(B.up), down: t(B.down), left: t(B.left), right: t(B.right) });
+    },
+    { p: PITCH, B: BOUNDS },
+  );
   if (c.beat) {
     for (let i = 0; i < 400; i++) {
       const b = await page.evaluate(() => window.__app.scene.debugState?.().beat);

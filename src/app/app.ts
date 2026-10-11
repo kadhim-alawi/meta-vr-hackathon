@@ -10,6 +10,7 @@ import { Sparkles } from '../render/sparkles.js';
 import { Desk, DeskSource } from '../xr/desk.js';
 import { HandTracker } from '../xr/hands.js';
 import { HandVisuals } from '../xr/hand-visual.js';
+import { Room } from '../xr/room.js';
 import { PerfHud } from '../ui/perf-hud.js';
 
 export interface Scene {
@@ -27,6 +28,8 @@ export class App {
   readonly handVisuals = new HandVisuals();
   readonly audio = new AudioEngine();
   readonly desk = new Desk();
+  /** the real room's detected surfaces and walls (mixed reality only) */
+  readonly room = new Room();
   readonly sparkles = new Sparkles();
   readonly save = new Save();
   readonly env: Environment;
@@ -46,6 +49,14 @@ export class App {
   firstScene: () => string = () => 'story';
   /** handlers for desk placement changes */
   onDeskPlaced: ((src: DeskSource) => void)[] = [];
+  /**
+   * The headset's field of view as tangents of the half-angles, read from the
+   * live projection each frame (narrowest of the two eyes), so layout can
+   * adapt between Quest and VR Glasses.
+   */
+  readonly fov = { up: Math.tan(0.7), down: Math.tan(0.7), left: Math.tan(0.7), right: Math.tan(0.7) };
+  /** true while the system menu is open or the headset is off */
+  paused = false;
   /** frame counter for perf sampling */
   frames = 0;
   /** game speed multiplier (automated tests only: ?ts=3) */
@@ -92,12 +103,20 @@ export class App {
 
   private onVisibility(v: VisibilityState): void {
     const session = this.world.session;
+    // system menu open or headset off: hold everything still until we're back
+    const away = v === VisibilityState.Hidden || v === VisibilityState.VisibleBlurred;
+    if (away !== this.paused) {
+      this.paused = away;
+      if (away) this.audio.suspend();
+      else this.audio.resume();
+    }
     if (v === VisibilityState.NonImmersive) {
       this.mode = 'none';
       this.hands.attach(null);
       this.audio.music.stop();
       this.lastSession = undefined;
       this.desk.reset();
+      this.room.clear();
       if (this.sceneFactory.idle) this.setScene('idle');
       document.body.classList.remove('in-xr');
       return;
@@ -131,6 +150,30 @@ export class App {
     this.pending = () => make(arg);
   }
 
+  private updateFov(): void {
+    const xr = this.world.renderer.xr;
+    if (!xr.isPresenting) return;
+    const cams = xr.getCamera().cameras;
+    let up = Infinity;
+    let down = Infinity;
+    let left = Infinity;
+    let right = Infinity;
+    for (const c of cams) {
+      const e = c.projectionMatrix.elements;
+      if (!(e[0] > 0 && e[5] > 0)) return;
+      up = Math.min(up, (1 + e[9]) / e[5]);
+      down = Math.min(down, (1 - e[9]) / e[5]);
+      right = Math.min(right, (1 + e[8]) / e[0]);
+      left = Math.min(left, (1 - e[8]) / e[0]);
+    }
+    if (!Number.isFinite(up)) return;
+    const f = this.fov;
+    f.up = up;
+    f.down = down;
+    f.left = left;
+    f.right = right;
+  }
+
   /** Called once per rendered frame by the game system. */
   update(dt: number, time: number, frame: XRFrame | undefined): void {
     this.time = time;
@@ -141,6 +184,7 @@ export class App {
     const cam = this.world.camera;
     cam.getWorldPosition(this.headPos);
     cam.getWorldQuaternion(this.headQuat);
+    this.updateFov();
 
     const ref = this.world.renderer.xr.getReferenceSpace();
     const player = this.world.player;
@@ -149,6 +193,9 @@ export class App {
     this.desk.update(frame, ref, { position: this.headPos, quaternion: this.headQuat }, this.hands, player.matrixWorld, this.mode === 'ar' ? 'ar' : 'vr', dt);
     this.desk.group.updateWorldMatrix(true, false);
     this.env.follow(this.desk.group.getWorldPosition(this.tmpV));
+    if (this.mode === 'ar' && frame && ref) this.room.update(frame, ref, player.matrixWorld, time);
+    // paused: keep rendering, but no game time passes and no scene changes
+    if (this.paused) return;
 
     if (this.pending) {
       const make = this.pending;

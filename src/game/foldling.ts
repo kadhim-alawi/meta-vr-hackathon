@@ -101,6 +101,18 @@ export class Foldling {
   private pokeCool = 0;
   private tmp = new Vector3();
   private tmp2 = new Vector3();
+  // scratch for room queries and falling (never shared with tmp/tmp2)
+  private groundW = new Vector3();
+  private wallA = new Vector3();
+  private wallB = new Vector3();
+  private wallP = new Vector3();
+  private wallN = new Vector3();
+  private deskQ = new Quaternion();
+  private fallEuler = new Euler();
+  /** seconds until a creature that landed off the desk heads home (-1 = not waiting) */
+  private homeIn = -1;
+  private homeTo = new Vector3();
+  private pathDone: (() => void) | null = null;
   private m = new Matrix4();
   /** extra per-kind animation hook */
   animate: ((dt: number, t: number) => void) | null = null;
@@ -243,6 +255,11 @@ export class Foldling {
   update(dt: number, t: number): void {
     this.t += dt;
     this.pokeCool = Math.max(0, this.pokeCool - dt);
+    if (this.homeIn >= 0) {
+      this.homeIn -= dt;
+      if (this.mode !== 'idle') this.homeIn = -1;
+      else if (this.homeIn < 0) void this.returnHome(this.homeTo);
+    }
     if (this.mode !== 'waking' && Math.abs(this.s - this.scaleGoal) > 1e-4) {
       this.group.scale.setScalar(this.s + (this.scaleGoal - this.s) * damp(5, dt));
     }
@@ -407,6 +424,7 @@ export class Foldling {
   }
 
   grab(h: HandState): void {
+    this.homeIn = -1;
     this.holder = h;
     h.claimedBy = this;
     this.mode = 'held';
@@ -458,7 +476,7 @@ export class Foldling {
       v.applyQuaternion(dq.invert());
     }
     // keep yaw only when put down
-    const e = new Euler().setFromQuaternion(this.group.quaternion, 'YXZ');
+    const e = this.fallEuler.setFromQuaternion(this.group.quaternion, 'YXZ');
     this.facing = this.faceGoal = e.y;
     // a tossed plane glides; everything else (and a plane set down) drops
     this.mode = this.kind === 'glider' && v.lengthSq() > 0.25 ? 'flying' : 'falling';
@@ -471,13 +489,14 @@ export class Foldling {
     this.velocity.y -= 2.2 * dt;
     this.velocity.x *= Math.exp(-3 * dt);
     this.velocity.z *= Math.exp(-3 * dt);
+    const fromY = this.group.position.y;
     this.group.position.addScaledVector(this.velocity, dt);
     // settle upright
-    const e = new Euler().setFromQuaternion(this.group.quaternion, 'YXZ');
+    const e = this.fallEuler.setFromQuaternion(this.group.quaternion, 'YXZ');
     e.x *= Math.exp(-10 * dt);
     e.z *= Math.exp(-10 * dt);
     this.group.quaternion.setFromEuler(e);
-    const ground = this.groundAt(this.group.position);
+    const ground = this.groundAt(this.group.position, fromY);
     if (this.group.position.y <= ground) {
       this.group.position.y = ground;
       this.velocity.set(0, 0, 0);
@@ -492,22 +511,53 @@ export class Foldling {
   /** Desk area creatures may roam (desk-local x/z). */
   static readonly BOUNDS = { x0: -0.5, x1: 0.5, z0: -0.62, z1: 0.3 };
 
-  /** Dropped or flown off the desk? Hop back on. */
+  /** Dropped or flown off the desk? Rest a moment where it landed, then come home. */
   stayOnDesk(): void {
-    const b = Foldling.BOUNDS;
     const p = this.group.position;
-    if (p.x >= b.x0 && p.x <= b.x1 && p.z >= b.z0 && p.z <= b.z1) return;
-    const back = new Vector3(clamp(p.x, b.x0 + 0.08, b.x1 - 0.08), 0, clamp(p.z, b.z0 + 0.1, b.z1 - 0.05));
-    back.y = this.groundAt(back);
+    if (Foldling.overDesk(p)) return;
+    const b = Foldling.BOUNDS;
+    this.homeTo.set(clamp(p.x, b.x0 + 0.08, b.x1 - 0.08), 0, clamp(p.z, b.z0 + 0.1, b.z1 - 0.05));
+    this.homeTo.y = this.groundAt(this.homeTo);
     this.chirp('curious', 2);
-    void this.moveToPos(back, 0.9, 0.12);
+    // on your real sofa or floor (or the study floor), let the player see where it went
+    this.homeIn = this.app.mode === 'none' ? 0.01 : 1.2;
   }
 
-  /** Height of the highest surface under a desk-local point (0 = desk). */
-  groundAt(p: Vector3): number {
+  /** Fly (paper plane) or hop back to a desk-local spot. */
+  returnHome(to: Vector3): Promise<void> {
+    this.homeIn = -1;
+    if (this.kind === 'glider') {
+      return new Promise((res) => {
+        this.flyTo(to, this.tmp.set(0, 1, 0), () => res());
+      });
+    }
+    const d = this.group.position.distanceTo(to);
+    return this.moveToPos(to, clamp(0.6 + d * 0.8, 0.6, 1.5), clamp(0.06 + d * 0.25, 0.06, 0.35));
+  }
+
+  static overDesk(p: Vector3): boolean {
+    const b = Foldling.BOUNDS;
+    return p.x >= b.x0 && p.x <= b.x1 && p.z >= b.z0 && p.z <= b.z1;
+  }
+
+  /**
+   * Height of the highest surface under a desk-local point (0 = desk). Off
+   * the desk it is the real room's surface below (mixed reality) or the
+   * study floor (VR). `fromY` is where the object was before this step, so
+   * a fast fall that passes through a surface in one frame still finds it.
+   */
+  groundAt(p: Vector3, fromY = p.y): number {
     let y = 0;
     for (const s of this.surfaces) {
       if (p.x >= s.x0 && p.x <= s.x1 && p.z >= s.z0 && p.z <= s.z1) y = Math.max(y, s.y);
+    }
+    if (Foldling.overDesk(p)) return y;
+    const w = this.app.fromDesk(p, this.groundW);
+    if (this.app.mode === 'ar') {
+      const top = this.app.room.surfaceBelow(w, w.y + Math.max(0, fromY - p.y) + 0.02);
+      if (top !== null) return this.app.toDesk(w.set(w.x, top, w.z), w).y;
+    } else if (this.app.mode === 'vr') {
+      return this.app.toDesk(w.set(w.x, 0, w.z), w).y;
     }
     return y;
   }
@@ -522,7 +572,8 @@ export class Foldling {
   private path: { p0: Vector3; p1: Vector3; p2: Vector3; t: number; dur: number } | null = null;
 
   /** Launch along a curve that starts in the throw direction and ends at `target`. */
-  flyTo(target: Vector3, throwVel: Vector3): void {
+  flyTo(target: Vector3, throwVel: Vector3, onArrive?: () => void): void {
+    this.pathDone = onArrive ?? null;
     const p0 = this.group.position.clone();
     const dir = throwVel.clone();
     if (dir.lengthSq() < 1e-4) dir.set(0, 0.3, -1);
@@ -557,6 +608,16 @@ export class Foldling {
     }
     if (t >= 1) {
       this.path = null;
+      if (this.pathDone) {
+        // a flight home: settle on the desk
+        const done = this.pathDone;
+        this.pathDone = null;
+        this.mode = 'idle';
+        this.group.rotation.set(0, this.facing, 0);
+        this.velocity.set(0, 0, 0);
+        done();
+        return;
+      }
       this.mode = 'scripted';
       this.onLand?.(true);
     }
@@ -592,6 +653,7 @@ export class Foldling {
     }
     this.prevPos.copy(this.group.position);
     this.group.position.addScaledVector(v, dt);
+    if (this.hitWall()) return;
     if (this.homeTarget) {
       // swept hit test: distance from the target to this step's segment
       this.seg.subVectors(this.group.position, this.prevPos);
@@ -613,7 +675,7 @@ export class Foldling {
       this.facing = yaw;
       this.group.rotation.set(pitch, yaw, bank, 'YXZ');
     }
-    const ground = this.groundAt(this.group.position);
+    const ground = this.groundAt(this.group.position, this.prevPos.y);
     if (this.group.position.y <= ground) {
       this.group.position.y = ground;
       this.velocity.set(0, 0, 0);
@@ -623,6 +685,30 @@ export class Foldling {
       if (this.onLand) this.onLand(false);
       else this.stayOnDesk();
     }
+  }
+
+  /**
+   * Mixed reality: did this flight step cross one of the real room's walls?
+   * Then bump off it and flutter down, like paper does.
+   */
+  private hitWall(): boolean {
+    const room = this.app.room;
+    if (this.app.mode !== 'ar' || room.planes.length === 0) return false;
+    const a = this.app.fromDesk(this.prevPos, this.wallA);
+    const b = this.app.fromDesk(this.group.position, this.wallB);
+    if (!room.wallHit(a, b, this.wallP, this.wallN)) return false;
+    this.wallP.addScaledVector(this.wallN, 0.02);
+    this.app.toDesk(this.wallP, this.group.position);
+    // wall normal into desk space (the desk only turns about y)
+    this.app.desk.group.getWorldQuaternion(this.deskQ).invert();
+    this.wallN.applyQuaternion(this.deskQ);
+    const into = this.velocity.dot(this.wallN);
+    if (into < 0) this.velocity.addScaledVector(this.wallN, -2 * into);
+    this.velocity.multiplyScalar(0.25);
+    this.mode = 'falling';
+    this.app.audio.rustle(this.app.fromDesk(this.group.position), 0.6);
+    this.chirp('curious', 1);
+    return true;
   }
 
   private updateMove(dt: number): void {

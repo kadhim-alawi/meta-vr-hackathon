@@ -350,9 +350,9 @@ export class StoryScene implements Scene {
         hit = true;
         return;
       }
-      // missed: hop back to the mat and try again
+      // missed: fly back to the mat and try again
       plane.chirp('curious', 2);
-      void plane.moveToPos(new Vector3(0, 0, 0), 0.8, 0.06).then(tryThrow);
+      void plane.returnHome(new Vector3(0, 0, 0)).then(tryThrow);
     };
     const start = s.time;
     let nudged = false;

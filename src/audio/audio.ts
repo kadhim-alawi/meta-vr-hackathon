@@ -64,6 +64,15 @@ export class AudioEngine {
     if (this.ctx.state !== 'running') void this.ctx.resume();
   }
 
+  /** Freeze all sound (system menu open, headset off); resume() carries on. */
+  suspend(): void {
+    if (this.ctx && this.ctx.state === 'running') void this.ctx.suspend();
+  }
+
+  resume(): void {
+    if (this.ctx && this.ctx.state !== 'running') void this.ctx.resume();
+  }
+
   applyVolumes(): void {
     if (!this.ctx) return;
     this.master.gain.value = this.volumes.master;

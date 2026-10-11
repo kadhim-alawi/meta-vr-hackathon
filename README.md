@@ -74,7 +74,8 @@ npm test             # fold-engine unit tests (vitest)
 npm run typecheck
 npm run build        # production build → dist/
 npm run models       # renders every model's fold sequence to docs/model-sheets/*.png
-npm run e2e          # full story playthrough with emulated hands (needs a build + Playwright Chromium)
+npm run e2e          # full story playthrough with emulated hands (run `npm run build` and
+                     # `npx playwright install chromium` first)
 ```
 
 Useful URL parameters (the emulator is loaded only on request):
@@ -134,11 +135,17 @@ jitter.
 - `npm test`: 34 tests (geometry, folding, area conservation, every model step, eye visibility,
   hinges, the script runner, save data and the story's fold budget).
 - `npm run models`: contact sheets of every fold step (`docs/model-sheets/`).
-- `scripts/e2e/playthrough.mjs`: plays the entire story in headless Chromium with Meta's IWER
-  emulator. It folds every model with an emulated hand, throws, sails, pours, fans, turns every page
-  and opens the final letter, then saves screenshots under `test-results/`.
+- `node scripts/e2e/playthrough.mjs quest3 [chapter]`: plays the story in headless Chromium with
+  Meta's IWER headset emulator and scripted hands. It folds every model by pinching and dragging,
+  tosses the plane into the book, places and sails the boat by waving, dips and pours the cup, fans
+  the windmill, gives the heart, turns every page and opens the final letter, then saves screenshots
+  under `test-results/`. The full run (prologue to hub) passes with no console errors.
+- `node scripts/e2e/perf.mjs`: draw calls and triangles per scene in an emulated session. The busiest
+  scene (the garden spread) is about 170 draw calls and 25k triangles per frame for both eyes,
+  including the shadow pass. Most scenes are lower.
 
-**Not yet verified on physical hardware.** See [docs/DEVICE_TEST_CHECKLIST.md](docs/DEVICE_TEST_CHECKLIST.md).
+**Not yet verified on physical hardware.** Frame rate, hand-tracking feel and passthrough placement
+need a real Quest. See [docs/DEVICE_TEST_CHECKLIST.md](docs/DEVICE_TEST_CHECKLIST.md).
 
 ## Credits
 

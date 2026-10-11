@@ -56,6 +56,8 @@ type HandFrame = XRFrame & {
 const PINCH_START = 0.019;
 const PINCH_END = 0.034;
 const HISTORY = 12;
+/** m/s; caps release velocity against tracking glitches */
+const MAX_THROW = 6;
 
 export class HandState {
   readonly side: Side;
@@ -123,15 +125,18 @@ export class HandState {
   /**
    * Release velocity for throws: the fastest stretch of hand motion in the
    * last ~250 ms. Hands decelerate as fingers open, so the plain latest
-   * velocity under-reports a throw.
+   * velocity under-reports a throw. Each stretch spans at least 50 ms so a
+   * one-frame tracking jump can't pass for a flick.
    */
-  throwVelocity(out: Vector3, now: number, window = 0.25): Vector3 {
+  throwVelocity(out: Vector3, now: number, window = 0.25, span = 0.05): Vector3 {
     const recent = this.hist.filter((h) => h.t >= 0 && now - h.t <= window).sort((a, b) => a.t - b.t);
     let best = -1;
     for (let i = 1; i < recent.length; i++) {
-      const dt = recent[i].t - recent[i - 1].t;
-      if (dt < 1e-3) continue;
-      this.inst.subVectors(recent[i].p, recent[i - 1].p).divideScalar(dt);
+      let j = i - 1;
+      while (j > 0 && recent[i].t - recent[j].t < span) j--;
+      const dt = recent[i].t - recent[j].t;
+      if (dt < 0.02) continue;
+      this.inst.subVectors(recent[i].p, recent[j].p).divideScalar(dt);
       const sp = this.inst.lengthSq();
       if (sp > best) {
         best = sp;
@@ -139,6 +144,8 @@ export class HandState {
       }
     }
     if (best < 0) out.copy(this.velocity);
+    // nobody tosses paper faster than this
+    if (out.lengthSq() > MAX_THROW * MAX_THROW) out.setLength(MAX_THROW);
     return out;
   }
 

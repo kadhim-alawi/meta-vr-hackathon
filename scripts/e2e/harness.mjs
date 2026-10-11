@@ -150,7 +150,9 @@ export async function throwToward(page, side, dir, speed = 1.6, framesN = 5) {
       let last = performance.now();
       for (let i = 0; i < framesN; i++) {
         const now = performance.now();
-        const dt = Math.max(0.011, (now - last) / 1000);
+        // real frame time, but never more than a 35 ms step (slow headless frames
+        // would otherwise carry the hand past the target before release)
+        const dt = Math.min(0.035, Math.max(0.011, (now - last) / 1000));
         last = now;
         dev.position.x += u[0] * speed * dt;
         dev.position.y += u[1] * speed * dt;

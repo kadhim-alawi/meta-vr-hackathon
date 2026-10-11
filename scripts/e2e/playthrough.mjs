@@ -9,8 +9,9 @@ import { launch, frames, movePinchTo, pinchAt, setPinch, shot, sleep, throwTowar
 const device = process.argv[2] ?? 'quest3';
 const chapter = process.argv[3] ?? '';
 const scene = chapter ? `story:${chapter}` : 'story';
+const suffix = chapter && chapter !== '0' ? `-ch${chapter}` : '';
 const { page, logs, close } = await launch(`emulate=${device}&autostart=vr&scene=${scene}&ts=3`, { width: 560, height: 420 });
-const out = `test-results/playthrough-${device}${chapter ? '-ch' + chapter : ''}`;
+const out = `test-results/playthrough-${device}${suffix}`;
 const t0 = Date.now();
 const log = (...a) => console.log(`[${((Date.now() - t0) / 1000).toFixed(0)}s]`, ...a);
 await sleep(1000);
@@ -100,6 +101,7 @@ for (;;) {
     guard = 0;
   }
   if (beat === 'end' || beat === 'none') break;
+  if (process.env.E2E_STOP_AT && beat === process.env.E2E_STOP_AT) break;
   guard++;
   if (!['intro', 'talk', 'fold'].includes(beat) && guard > 30) {
     log(`STUCK at beat ${beat}`);
@@ -116,9 +118,23 @@ for (;;) {
     case 'throw': {
       await snap('plane-alive');
       await carry(targets.obj, [targets.obj[0], targets.obj[1] + 0.06, targets.obj[2] + 0.05], 0.02);
+      // record how the release was judged
+      await page.evaluate(() => {
+        const app = window.__app;
+        const f = app.scene.stage.foldlings.find((x) => x.def.id === 'plane');
+        if (!f || f.__wrapped) return;
+        f.__wrapped = true;
+        const orig = f.onRelease;
+        f.onRelease = (v) => {
+          const toBook = app.scene.book.group.position.clone().setY(app.scene.book.group.position.y + 0.05).sub(f.group.position).normalize();
+          window.__rel = { v: v.toArray().map((x) => +x.toFixed(2)), along: +v.dot(toBook).toFixed(2), mode: f.mode };
+          orig?.(v);
+        };
+      });
       // fling towards the book
       const from = await page.evaluate(() => window.__app.hands.right.pinchPoint.toArray());
       await throwToward(page, R, [targets.to[0] - from[0], targets.to[1] - from[1] + 0.15, targets.to[2] - from[2]], 1.6, 3);
+      log('release', JSON.stringify(await page.evaluate(() => window.__rel ?? null)));
       await frames(page, 20);
       await snap('plane-thrown');
       break;

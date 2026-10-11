@@ -329,9 +329,11 @@ export class StoryScene implements Scene {
     tryThrow();
     this.beat('throw', () => ({ obj: plane.centreLocal(new Vector3()), to: coverTop(new Vector3()) }));
     plane.onRelease = (vel) => {
-      const toBook = coverTop(new Vector3()).sub(plane.group.position).normalize();
-      const along = vel.dot(toBook);
-      if (along > 0.35) {
+      const toBook = coverTop(new Vector3()).sub(plane.group.position);
+      // let go right over the book (a "drop in") counts too
+      const overBook = Math.hypot(toBook.x, toBook.z) < 0.15;
+      const along = vel.dot(toBook.normalize());
+      if (along > 0.35 || overBook) {
         this.stage.hideHint();
         plane.flyTo(coverTop(new Vector3()), vel);
         this.app.audio.whoosh(this.app.fromDesk(plane.group.position), 0.6, true);

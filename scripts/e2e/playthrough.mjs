@@ -95,10 +95,12 @@ async function carry(obj, to, lift = 0.05) {
 }
 
 let lastBeat = '';
+let fallbacks = [];
 let guard = 0;
 for (;;) {
   if (Date.now() - t0 > 40 * 60 * 1000) throw new Error('playthrough timed out');
-  const { beat, targets } = await state();
+  const { beat, targets, fallbacks: fb } = await state();
+  if (fb) fallbacks = fb;
   if (beat !== lastBeat) {
     log('beat', beat);
     lastBeat = beat;
@@ -240,8 +242,14 @@ for (;;) {
 }
 log('finished');
 if (issues.length) log('ISSUES:', issues.join(' | '));
+// a beat the story finished on the player's behalf means an interaction failed
+if (fallbacks.length) {
+  log('FALLBACKS used:', fallbacks.join(' | '));
+  process.exitCode ||= 3;
+} else log('no fallbacks used');
 await sleep(4000);
 await snap('menu');
 const errors = logs.filter((l) => /\[(error|pageerror)\]/.test(l) && !l.includes('ERR_TUNNEL'));
 console.log(errors.length ? errors.slice(0, 20).join('\n') : 'no errors');
+if (errors.length) process.exitCode ||= 1;
 await close();

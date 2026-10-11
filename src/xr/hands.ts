@@ -129,7 +129,11 @@ export class HandState {
    * one-frame tracking jump can't pass for a flick.
    */
   throwVelocity(out: Vector3, now: number, window = 0.25, span = 0.05): Vector3 {
-    const recent = this.hist.filter((h) => h.t >= 0 && now - h.t <= window).sort((a, b) => a.t - b.t);
+    // the last 0.25 s or the last 5 samples, whichever is longer, so a slow
+    // frame between the flick and the release can't hide the flick
+    const all = this.hist.filter((h) => h.t >= 0).sort((a, b) => a.t - b.t);
+    const from = Math.min(now - window, all.length >= 5 ? all[all.length - 5].t : -Infinity);
+    const recent = all.filter((h) => h.t >= from);
     let best = -1;
     for (let i = 1; i < recent.length; i++) {
       let j = i - 1;

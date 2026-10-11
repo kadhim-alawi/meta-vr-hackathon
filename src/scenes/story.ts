@@ -69,14 +69,17 @@ export class StoryScene implements Scene {
   }
 
   /** World-space positions relevant to the current beat (test/debug helper). */
-  debugState(): { beat: string; targets: Record<string, number[] | number[][]> } {
+  /** accessibility fallbacks that finished a beat for the player (tests check this) */
+  readonly fallbacks: string[] = [];
+
+  debugState(): { beat: string; targets: Record<string, number[] | number[][]>; fallbacks: string[] } {
     const out: Record<string, number[] | number[][]> = {};
     const t = this.beatTargets();
     for (const [k, v] of Object.entries(t)) {
       out[k] = Array.isArray(v) ? v.map((p) => this.app.fromDesk(p).toArray()) : this.app.fromDesk(v).toArray();
     }
     if (this.beatName === 'fold' && this.stage.fold) out.path = this.stage.fold.debugPath(14).path;
-    return { beat: this.beatName, targets: out };
+    return { beat: this.beatName, targets: out, fallbacks: this.fallbacks };
   }
 
   get foldController() {
@@ -234,7 +237,10 @@ export class StoryScene implements Scene {
     const start = this.script.time;
     await this.script.until(() => {
       // after a while, offer to turn it for them
-      if (this.script.time - start > 30 && this.book.phase === 'open') this.book.autoTurn();
+      if (this.script.time - start > 30 && this.book.phase === 'open') {
+        this.book.autoTurn();
+        this.fallbacks.push('page turned itself');
+      }
       return turned;
     });
     this.beat('talk');
@@ -354,6 +360,7 @@ export class StoryScene implements Scene {
       if (!nudged && s.time - start > 35 && plane.mode === 'idle') {
         // the plane gets impatient and flies on its own
         nudged = true;
+        this.fallbacks.push('plane flew itself');
         this.stage.showHint('The plane got impatient!');
         plane.flyTo(coverTop(new Vector3()), new Vector3(0, 0.6, -1.1));
       }
@@ -730,7 +737,10 @@ export class StoryScene implements Scene {
     const start = s.time;
     await s.until(() => {
       // accessibility: Kit walks over to fetch it after a while
-      if (!given && s.time - start > 40 && heart.mode === 'idle') given = true;
+      if (!given && s.time - start > 40 && heart.mode === 'idle') {
+        given = true;
+        this.fallbacks.push('Kit fetched the heart');
+      }
       return given;
     });
     this.beat('talk');
@@ -821,7 +831,10 @@ export class StoryScene implements Scene {
           opened = true;
         }
       }
-      if (s.time - startOpen > 30) opened = true;
+      if (!opened && s.time - startOpen > 30) {
+        opened = true;
+        this.fallbacks.push('letter opened itself');
+      }
       return opened;
     });
     this.beat('talk');

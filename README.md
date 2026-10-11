@@ -32,7 +32,7 @@ your own table.</sub>
 |---|---|
 | **Pinch** the glowing corner and move your hand | fold. The flap follows your hand around the crease. Let go past halfway and it snaps. |
 | **Pinch** a Foldling | pick it up. Rotate your hand to tilt it (pouring water, for example). |
-| Quick **toss** | throw the paper plane |
+| Quick **toss** | throw the paper plane (letting go right over the book works too) |
 | **Wave** your open hand | blow wind at the sailboat; a fan makes stronger wind |
 | **Poke** with a fingertip | press paper-tag buttons; tickle a Foldling |
 | **Pinch** the page corner and sweep left | turn the page |
@@ -149,7 +149,9 @@ jitter.
   Meta's IWER headset emulator and scripted hands. It folds every model by pinching and dragging,
   tosses the plane into the book, places and sails the boat by waving, dips and pours the cup, fans
   the windmill, gives the heart, turns every page and opens the final letter, then saves screenshots
-  under `test-results/`. The full run (prologue to hub) passes with no console errors.
+  under `test-results/`. The full run (prologue to hub) passes with no console errors and without
+  any accessibility fallback (impatient plane, auto page turn, and so on) stepping in; the script
+  fails if one does.
 - `node scripts/e2e/modes.mjs`: pokes through the hub with an emulated fingertip into Free fold
   (the puppy), the Daily fold and Settings, and checks the save data, the desk shelf and the streak.
 - `node scripts/e2e/perf.mjs`: draw calls and triangles per scene in an emulated session. The busiest

@@ -10,16 +10,20 @@ const device = process.argv[2] ?? 'quest3';
 const chapter = process.argv[3] ?? '';
 const scene = chapter ? `story:${chapter}` : 'story';
 const suffix = chapter && chapter !== '0' ? `-ch${chapter}` : '';
-const { page, logs, close } = await launch(`emulate=${device}&autostart=vr&scene=${scene}&ts=3`, { width: 560, height: 420 });
-const out = `test-results/playthrough-${device}${suffix}`;
+// E2E_SIZE=1280x720 and E2E_HEAD="x,y,z,pitchRadians" for nicer screenshots
+const [width, height] = (process.env.E2E_SIZE ?? '560x420').split('x').map(Number);
+const head = (process.env.E2E_HEAD ?? '0,1.2,0,-0.6').split(',').map(Number);
+const { page, logs, close } = await launch(`emulate=${device}&autostart=vr&scene=${scene}&ts=3`, { width, height });
+const out = process.env.E2E_OUT ?? `test-results/playthrough-${device}${suffix}`;
 const t0 = Date.now();
 const log = (...a) => console.log(`[${((Date.now() - t0) / 1000).toFixed(0)}s]`, ...a);
 await sleep(1000);
-await page.evaluate(() => {
+await page.evaluate((head) => {
   const d = window.__xrdevice;
-  const p = -0.6;
+  const p = head[3];
+  d.position.set(head[0], head[1], head[2]);
   d.quaternion.set(Math.sin(p / 2), 0, 0, Math.cos(p / 2));
-});
+}, head);
 const R = 'right';
 const state = () => page.evaluate(() => window.__app.scene?.debugState?.() ?? { beat: 'none', targets: {} });
 const setHandRot = (q) => page.evaluate((q) => window.__xrdevice.hands.right.quaternion.set(...q), q);

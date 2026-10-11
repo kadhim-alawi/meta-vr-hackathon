@@ -60,7 +60,10 @@ of the Foldlings you've made, who remember you between sessions.
   babbling voices and a generative music-box score. There are no asset downloads, and it works
   offline once loaded.
 - **Automated verification:** a headless playthrough drives Meta's IWER headset emulator with
-  scripted hands through the entire story.
+  scripted hands through the entire story: every fold, the toss, sailing, pouring, fanning, every
+  page turn and the final letter. Further scripts poke through the hub, Free fold, Daily fold and
+  Settings with an emulated fingertip, check that everything fits the VR Glasses' field of view,
+  and count draw calls per scene (about 170 at most, for both eyes).
 
 ## Challenges we ran into
 
@@ -70,8 +73,12 @@ of the Foldlings you've made, who remember you between sessions.
 - Multi-layer folds: deciding which layers move. Flood-filling over paper-space adjacency makes
   connected layers move together, exactly as real paper does.
 - Designing origami that reads well flat, comes alive in 3D, and can be folded in 3–5 moves.
-- Designing for a 70° field of view and a seated, airplane-sized space: one compact zone, and the
-  book slides to you when it's time to play.
+- Designing for the VR Glasses' narrower, downward-biased view (37° left and right, 25° up,
+  43° down) and a seated, airplane-sized space: one compact zone, and the book slides to you when
+  it's time to play. We measure it automatically for every key moment.
+- Tuning physical challenges so they feel good rather than tiring. The first windmill needed close
+  to a minute of fanning; now a few big waves lift the basket. Throws are judged from the hand's
+  motion over at least 50 ms, so a tracking glitch can't fling a plane you meant to set down.
 
 ## Accomplishments that we're proud of
 

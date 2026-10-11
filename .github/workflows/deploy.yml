@@ -7,6 +7,11 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      after_deadline:
+        description: 'Deploy after the entry deadline (only to restore the judged build)'
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -23,6 +28,15 @@ jobs:
     env:
       PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
     steps:
+      # The competition judges the entry as it was at the deadline
+      # (Nov 18, 2026, 12:00 PM PT). Don't let a later push change it.
+      - name: Respect the judging freeze
+        if: ${{ !inputs.after_deadline }}
+        run: |
+          if [ "$(date -u +%s)" -ge "$(date -u -d '2026-11-18T20:00:00Z' +%s)" ]; then
+            echo "::error::The entry period has closed; the judged build must not change."
+            exit 1
+          fi
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:

@@ -16,6 +16,11 @@ Tunables are noted next to each item so fixes are quick.
 - [ ] With room setup done, the desk snaps to your real table (plane detection). If not, **lay your palm flat** on the table during the opening, and the desk should move there with a chime.
 - [ ] Exit and re-enter: the desk returns to the same spot (persistent anchor).
 - [ ] ☰ Menu → *Move desk here* recentres it.
+- [ ] **Pause/resume:** mid-fold, press the Meta button to open the system menu. The game freezes
+  and goes silent. Close the menu and everything continues where it was. Do the same by lifting
+  the headset off for a few seconds.
+- [ ] **A room you've never tested in** (a friend's table, a sofa, a desk against a wall): the
+  desk still lands on the table, or palm calibration works, or the floating desk appears.
 
 ## 2. Folding feel (the most important part)
 
@@ -36,6 +41,14 @@ Tunables are noted next to each item so fixes are quick.
 - [ ] **Letter**: pinch the envelope and the letter opens. The book closes and the hub appears.
 - [ ] Page turns: pinch the glowing corner and sweep left. After 30 s the page turns itself.
 
+## 3b. Your room (mixed reality)
+
+- [ ] Run Space Setup (Settings → Physical Space) so the headset knows your walls and furniture.
+- [ ] In the hub or Free fold, toss the finished paper plane towards a wall: it bumps off it and
+  flutters to the floor, rests a moment, then flies back to the desk.
+- [ ] Toss it onto a sofa or another table: it lands *on* that surface, not floating at desk height.
+- [ ] With no Space Setup at all, tosses still land and come home (desk height fallback).
+
 ## 4. Performance (judged: at least 60 fps)
 
 - [ ] Enable the Quest performance overlay (Meta Quest Developer Hub, or `chrome://inspect` → Performance). The target is a steady 72 fps.
@@ -47,7 +60,9 @@ Tunables are noted next to each item so fixes are quick.
 
 ## 6. Meta VR Glasses (no device yet)
 
-- [ ] In the desktop emulator, use `?emulate=glasses&autostart=ar` to check that the mat and book fit in the narrower field of view. `node scripts/e2e/fov-check.mjs` reports the angles automatically (all key objects fit at a 25° downward head tilt; set `PITCH=-15` to try a more upright posture).
+- [ ] In the desktop emulator, use `?emulate=glasses&autostart=ar` to check that the mat and book fit in the narrower field of view.
+- [ ] On real Glasses (when available): hint cards stay readable while you look down at the mat.
+  They slide into view automatically using the headset's own field of view. `node scripts/e2e/fov-check.mjs` reports the angles automatically (all key objects fit at a 25° downward head tilt; set `PITCH=-15` to try a more upright posture).
 
 ## 7. Submission video capture
 

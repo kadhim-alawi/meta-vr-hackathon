@@ -1,107 +1,98 @@
-# Devpost submission draft
+# Devpost submission (copy into the form)
 
-> Copy into the Devpost form. Fields marked ⚠ depend on the final form wording.
+Fields follow the official form. ⚠ marks things only you can fill in.
 
-**Project name:** Foldlings
-
-**Tagline:** Fold paper with your bare hands, and whatever you fold comes alive.
-
-**Track:** Gaming ⚠ (alternative: Entertainment, as "immersive storytelling")
-**Division:** New Experience (built from scratch during the competition window, from September 24, 2026)
-**Platform:** Meta Quest 3 / 3S and Meta VR Glasses (WebXR, Immersive Web SDK). Hosted link: `https://kadhim-alawi.github.io/meta-vr-hackathon/` (once GitHub Pages is enabled; see README → Deploy)
+| Field | Value |
+|---|---|
+| Submission name | **Foldlings** |
+| Tagline (≤ 140 chars) | Fold paper with your bare hands, and whatever you fold comes alive. *(67 characters)* |
+| Track | **Gaming** |
+| Division | **New Experience** (conceived and built from Oct 10, 2026, inside the window) |
+| Project link | `https://kadhim-alawi.github.io/meta-vr-hackathon/` ⚠ once hosting is live (see README → Deploy) |
+| Video | ⚠ public YouTube/Vimeo link, under 3:00 (`docs/VIDEO_SCRIPT.md`) |
+| Target launch date | Spring 2027, as a web app on the Meta Horizon Store, alongside Meta VR Glasses |
+| Team | ⚠ name, email, role for each member |
 
 ---
 
-## Inspiration
+## Description (about 470 words; the form suggests 500 or fewer)
 
-The first thing almost anyone makes with their hands is a paper airplane. Meta VR Glasses ship
-without controllers, so we asked: what's the most *hands* thing there is? Folding paper. It is
-tactile, precise, universal, and impossible with a controller. Then we asked the question every
-child asks: what if the paper plane you just folded could actually fly away? What if the boat could
-carry someone?
+### Inspiration
+The first thing almost anyone makes with their hands is a paper airplane. Meta VR Glasses have no
+controllers, so we asked: what is the most *hands* thing there is? Folding paper. It's tactile,
+precise, universal, and impossible with a controller. Then we asked the question every child asks:
+what if the plane you just folded could really fly away?
 
-## What it does
+### What it is
+Foldlings is a seated, hands-only mixed reality story game. A pop-up book opens on your real
+table. Kit, a tiny paper courier, has a letter for a friend at the end of the book, and every page
+is a problem you solve by folding the right helper:
 
-Foldlings is a seated, hands-only mixed reality adventure. A pop-up storybook opens on your real
-table. Inside, Kit, a tiny paper messenger, has a letter to deliver to a friend at the end of the
-book. Each page is a problem, and you solve it by folding the right helper with your own hands:
+- **Prologue:** the book is stuck. Fold a paper plane and toss it to knock the cover open.
+- **The River:** fold a sailboat, set it on the river, and sweep your hand to blow Kit across.
+- **The Garden:** fold a cup, dip it in the well, and tip it to water the flowers.
+- **Windy Hill:** fold a fan and wave it at a windmill to lift Kit up the cliff.
+- **Mo's House:** fold a heart for a friend who hasn't come outside since the rain began.
 
-- **Prologue:** the book is stuck shut. Fold a paper plane and toss it to knock the cover open.
-- **The River:** fold a sailboat, set it on the river, and wave your hand to blow Kit downstream.
-- **The Thirsty Garden:** fold a cup, dip it in the well, and tip it to water three wilting flowers.
-- **Windy Hill:** fold a fan and wave it at a windmill to power a basket lift up a cliff.
-- **Mo's Window:** fold a heart for the friend who hasn't come outside since the rain started.
+Pinch a glowing corner and the paper follows your hand around the crease. When the last fold lands,
+the paper inks its own eyes and wakes up: your paper, with your creases. The story takes about 12
+minutes, and the first creature is alive within about two. Afterwards there is Free fold (10
+models), a Daily fold with a new model and paper every day and a streak, and a desk of Foldlings
+that remember you.
 
-Every model is folded step by step: pinch a glowing corner and move your hand, and the paper follows
-around the crease. When the last fold lands, the paper glows, inks its own eyes, and comes alive
-with a voice and a personality. It is the *actual* paper you folded, with your creases.
+### How we built it
+- **Immersive Web SDK** (WebXR, Three.js). Open a link; there is nothing to install.
+- **A custom origami engine** in TypeScript: crease splitting, connected-flap selection, layer
+  stacking and 3D hinges, unit tested.
+- **Hands:** joint-based pinch with a grace window, point-and-pinch rays, poke buttons, and throws
+  judged from palm motion.
+- **Your room matters:** the desk snaps to your table (plane detection, or lay your palm flat), a
+  persistent anchor brings it back next time, paper casts shadows on your table, your real hands
+  pass in front of the paper, and a tossed plane bumps off your real walls, lands on your sofa or
+  floor, then flies home.
+- **FoV-aware:** everything fits the VR Glasses' narrower view, and hints adapt to each headset's
+  live field of view.
+- **All procedural:** paper textures, pop-ups, characters, sound effects, voices and a generative
+  music box. There are no asset downloads.
+- **Automated playtesting:** scripted emulated hands play the whole story in Meta's IWER emulator on
+  every change.
 
-After the story there are **Free fold** (10 models, including a puppy, kitten, fox, whale and
-tulip), a **Daily fold** with a new model and paper colour every day plus a streak, and a desk full
-of the Foldlings you've made, who remember you between sessions.
+### What's next
+More books and seasonal chapters; folding together with a friend at a shared table; Foldlings that
+roam your room's shelves using scene understanding; harder origami (crane, frog) with assisted
+squash folds; launch on the Horizon Store.
 
-## How we built it
+---
 
-- **Immersive Web SDK** (Meta's WebXR framework on Three.js): XR session, ECS frame loop, input
-  sources. Players open a link; there is nothing to install.
-- **A custom origami engine** in TypeScript: facets in paper space with isometries into the folded
-  frame, crease splitting, connected-flap selection by paper adjacency, layer stacking with local
-  overlap heights, and 3D shaping hinges with forward kinematics. Creases and ink are drawn in paper
-  space, so they land correctly however the sheet is folded. Unit tested, with every model rendered
-  step by step to contact sheets.
-- **Hands:** articulated joints via `fillPoses`, pinch with hysteresis plus a short grace window,
-  point-and-pinch rays, throw velocity from a motion history, poke buttons, flat-palm detection to
-  place the desk on your real table. Controllers are optional.
-- **Mixed reality:** plane detection or palm calibration to find the table, **persistent spatial
-  anchors** so the desk is where you left it, a shadow catcher so paper casts shadows on your real
-  table, and depth-only hand occluders so your real hands appear in front of the virtual paper.
-- **Everything procedural:** paper textures (washi patterns, fibres, creases), pop-up dioramas,
-  characters, and all audio, including paper rustles and crease snaps from filtered noise, FM bells,
-  babbling voices and a generative music-box score. There are no asset downloads, and it works
-  offline once loaded.
-- **Automated verification:** a headless playthrough drives Meta's IWER headset emulator with
-  scripted hands through the entire story: every fold, the toss, sailing, pouring, fanning, every
-  page turn and the final letter. Further scripts poke through the hub, Free fold, Daily fold and
-  Settings with an emulated fingertip, check that everything fits the VR Glasses' field of view,
-  and count draw calls per scene (about 170 at most, for both eyes).
+## How hand interactions are implemented (optional field)
 
-## Challenges we ran into
+Every interaction is a natural hand motion within about 45 cm of a seated player:
 
-- Making folds feel physical with imperfect hand tracking. The flap angle is the angle of your hand
-  *around the crease axis*, smoothed by a critically damped spring, so lifting over the crease and
-  dragging straight across both work. There is a magnet near the end and a forgiving release threshold.
-- Multi-layer folds: deciding which layers move. Flood-filling over paper-space adjacency makes
-  connected layers move together, exactly as real paper does.
-- Designing origami that reads well flat, comes alive in 3D, and can be folded in 3–5 moves.
-- Designing for the VR Glasses' narrower, downward-biased view (37° left and right, 25° up,
-  43° down) and a seated, airplane-sized space: one compact zone, and the book slides to you when
-  it's time to play. We measure it automatically for every key moment.
-- Tuning physical challenges so they feel good rather than tiring. The first windmill needed close
-  to a minute of fanning; now a few big waves lift the basket. Throws are judged from the hand's
-  motion over at least 50 ms, so a tracking glitch can't fling a plane you meant to set down.
+| Gesture | Implementation |
+|---|---|
+| **Fold** | Pinch the glowing corner; the flap angle follows your hand's angle *around the crease axis*, smoothed by a critically damped spring. Release past halfway to snap the fold. |
+| **Pick up / place** | Pinch a creature; rotating your wrist tilts it (pouring water). |
+| **Toss** | Release velocity from palm motion over ≥ 50 ms spans, so a tracking glitch can't fake a throw. Letting go right over a target also counts. |
+| **Wave / fan** | Palm velocity near the boat or windmill makes wind; holding the fan makes more. |
+| **Poke / point** | Fingertip-poke paper buttons; point-and-pinch for distant ones. |
+| **Place the desk** | Lay a palm flat on your table for a moment. |
 
-## Accomplishments that we're proud of
+Pinch uses thumb-to-index distance with hysteresis plus a short, frame-aware grace window, so
+pinching slightly off target and sliding on still grabs. Controllers work too (trigger = pinch), but
+they're never needed.
 
-- The moment the paper you just folded blinks at you.
-- A complete story with a real ending and an emotional beat, not a demo.
-- Accessibility built in: one-handed with either hand, captions, a fallback for every physical
-  challenge, and *Skip this fold* in the menu.
+**What excites us:** hands turn VR from pointing at things into *making* things. Glasses-sized
+headsets and good hand tracking mean everyday crafts, folding, sketching, building, can become play
+anywhere you sit.
 
-## What we learned
+---
 
-Hands-first design means designing for the hand's natural motion, not for gestures. The best
-interactions here (fold, toss, pour, wave) need no explanation.
+## Testing notes for judges
 
-## What's next for Foldlings
-
-- More chapters and seasonal books.
-- Shared tables: fold together with a friend (Best Social & Multiplayer).
-- Your Foldlings roaming your room, using scene mesh to hop onto shelves.
-- Harder origami (crane, frog) with assisted squash and petal folds.
-- Shipping as a PWA on the Meta Horizon Store.
-
-**Target launch date:** spring 2027, alongside Meta VR Glasses ⚠
-
-## Built with
-
-`webxr` · `immersive-web-sdk` · `three.js` · `typescript` · `web-audio` · `vite` · `vitest` · `playwright` · `iwer`
+1. Open the link in the **Meta Quest Browser**, sit at a table if you can, and tap **Enter Mixed
+   Reality** (or **Enter VR** for a virtual study). Put the controllers down.
+2. The story starts immediately. The **☰ Menu** tag on the desk can skip a fold, move the desk, or
+   return to the hub. Progress saves after each chapter.
+3. After the story, try **Free fold** and the **Daily fold**. In mixed reality, toss the paper plane
+   across your room.
+4. To start over: hub → **Settings → Start over**.

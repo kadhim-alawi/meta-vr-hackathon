@@ -1,8 +1,13 @@
-# Submission video: shot list (target 2:30, hard limit 3:00)
+# Submission video: shot list (target 2:30, must be under 3:00)
 
-Record **real on-device footage** in mixed reality at a real table. The rules warn against
-AI-generated video. Quest: *Camera → Record video* (enable the microphone if you want to say a line
-at the start). Keep head motion slow; seated.
+The rules allow footage from a Meta VR device **or** an emulator such as IWER, but judges score
+purposeful passthrough, so record **real mixed reality footage on a Quest at a real table** if you
+can: your table, your hands and your room are the pitch. Lead with the story, keep it honest (real
+gameplay, no AI-generated video), and upload it publicly to YouTube or Vimeo. Judges aren't required
+to watch past 3:00, so the best material comes first.
+
+Quest: *Camera → Record video* (enable the microphone if you want to say a line). Keep head motion
+slow; stay seated. Add English captions for any voice-over.
 
 | Time | Shot | On screen / voice-over (optional captions) |
 |---|---|---|
@@ -16,8 +21,9 @@ at the start). Keep head motion slow; seated.
 | 1:40–1:55 | Hill: fan wave, windmill spins, the basket lifts Kit up the cliff | |
 | 1:55–2:15 | Night: give the heart to Kit; Mo opens the door; the rain stops and the rainbow pops up | |
 | 2:15–2:30 | The letter floats to you; pinch it open: "Thank you for lending us your hands." | |
-| 2:30–2:45 | Hub: your Foldlings on the desk, Daily fold with streak, poke a puppy | "A new fold every day." |
-| 2:45–2:55 | Logo card: *Foldlings*, hands-only origami for Meta Quest & VR Glasses, plus the link | |
+| 2:30–2:40 | Hub: toss the paper plane across your room; it bumps your wall, lands on your sofa, then flies home | "Your room is part of the game." |
+| 2:40–2:48 | Your Foldlings on the desk, Daily fold with streak, poke a puppy | "A new fold every day." |
+| 2:48–2:55 | Logo card: *Foldlings*, hands-only origami for Meta Quest & VR Glasses, plus the link | |
 
 Tips
 - Lighting: bright, even room light improves both hand tracking and passthrough quality.

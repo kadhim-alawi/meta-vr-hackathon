@@ -99,9 +99,11 @@ Useful URL parameters (the emulator is loaded only on request):
 ## Deploy (GitHub Pages)
 
 `.github/workflows/deploy.yml` typechecks, tests and builds, then publishes `dist/` on every push to
-`main`. One-time setup: **Settings → Pages → Build and deployment → Source: GitHub Actions**. The
-app uses relative paths and works from any sub-path. Everything is bundled, so it does not depend
-on a CDN at runtime.
+`main`, or on demand from **Actions → Deploy to GitHub Pages → Run workflow**. One-time setup:
+**Settings → Pages → Build and deployment → Source: GitHub Actions**. On a free GitHub plan, Pages
+needs a public repository. The alternative is any static host, for example Vercel: import the repo,
+build command `npm run build`, output directory `dist`. The app uses relative paths and works from
+any sub-path. Everything is bundled, so it does not depend on a CDN at runtime.
 
 ---
 

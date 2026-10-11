@@ -12,6 +12,14 @@ and gets to work.
 Entry for the **Meta VR Start Developer Competition 2026**, Gaming track, New Experience division.
 See [docs/COMPETITION_BRIEF.md](docs/COMPETITION_BRIEF.md) for the rules analysis and strategy.
 
+| | |
+|---|---|
+| ![The first fold: pinch the glowing corner](docs/media/01-first-fold.jpg) | ![Kit sails the boat you folded down the river](docs/media/02-sailing.jpg) |
+| ![Fan the windmill to lift Kit up Windy Hill](docs/media/03-windmill.jpg) | ![The rain stops and the rainbow pops up](docs/media/04-rainbow.jpg) |
+
+<sub>Captured in Meta's IWER emulator in VR mode (the cozy study). In mixed reality the desk is
+your own table.</sub>
+
 ---
 
 ## Play it

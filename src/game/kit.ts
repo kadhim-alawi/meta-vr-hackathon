@@ -221,7 +221,8 @@ export class PaperCharacter {
     // billboard the bubble towards the camera (yaw only), scaled with its own height
     this.bubble.refreshZoom();
     // lift the bubble as it grows so it clears Kit and whatever they hold
-    this.bubble.mesh.position.y = 0.075 + 0.05 * (this.bubble.zoom - 1) + (this.bubble.heightM * this.bubble.zoom) / 2;
+    // x/z reset every frame: the view clamp below moves them and must not accumulate
+    this.bubble.mesh.position.set(0, 0.075 + 0.05 * (this.bubble.zoom - 1) + (this.bubble.heightM * this.bubble.zoom) / 2, 0);
     this.group.updateWorldMatrix(true, false);
     this.tmp.copy(camWorld);
     this.group.worldToLocal(this.tmp);

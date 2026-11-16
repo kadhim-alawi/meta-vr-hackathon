@@ -241,6 +241,8 @@ for (;;) {
       break;
     }
     default:
+      // keep the hand out of the way while Kit's bubble is up, so it can be read
+      if (guard === 1 && ['talk', 'intro'].includes(beat)) await restHand();
       await frames(page, 6);
       if (guard % 10 === 0) await snap(`${beat}-${guard}`);
   }

@@ -92,6 +92,7 @@ export class StoryScene implements Scene {
     private startChapter = 0,
   ) {
     this.stage = new Stage(app);
+    this.stage.hintYield = () => this.kit.captions && (this.kit.speaking || !!this.mo?.speaking);
     this.pause = new PauseMenu(app, {
       canSkip: () => !!this.stage.fold && !this.stage.fold.done,
       skip: () => this.stage.fold?.skipAll(),

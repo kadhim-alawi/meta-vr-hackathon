@@ -23,6 +23,8 @@ export class Stage {
   private hintGoal = new Vector3(0, 0.15, -0.2);
   private hintAlpha = 0;
   private hintWanted = false;
+  /** return true while a character's speech bubble is up: the hint card steps aside so they never overlap */
+  hintYield: (() => boolean) | null = null;
   private matGoal = new Vector3(0, 0.0006, 0);
   private matScale = 1;
   private matScaleGoal = 1;
@@ -182,7 +184,7 @@ export class Stage {
 
   update(dt: number, time: number): void {
     // hint card: ease in/out and face the player
-    this.hintAlpha += ((this.hintWanted ? 1 : 0) - this.hintAlpha) * damp(8, dt);
+    this.hintAlpha += ((this.hintWanted && !this.hintYield?.() ? 1 : 0) - this.hintAlpha) * damp(8, dt);
     this.hint.opacity = this.hintAlpha;
     this.hint.mesh.position.lerp(this.hintGoal, damp(6, dt));
     if (this.hintAlpha > 0.05) {

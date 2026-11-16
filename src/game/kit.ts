@@ -128,6 +128,31 @@ export class PaperCharacter {
     });
   }
 
+  private viewV = new Vector3();
+  private viewQ = new Quaternion();
+
+  /** Pull the bubble down/sideways so it never pokes out of the top or sides of the field of view. */
+  private keepBubbleInView(): void {
+    const b = this.bubble;
+    if (b.opacity <= 0.01) return;
+    const app = this.app;
+    const v = this.group.localToWorld(this.viewV.copy(b.mesh.position)).sub(app.headPos).applyQuaternion(this.viewQ.copy(app.headQuat).invert());
+    const z = -v.z;
+    if (z < 0.15) return;
+    const f = app.fov;
+    const k = 0.85;
+    const halfW = (b.widthM * b.zoom) / 2;
+    const halfH = (b.heightM * b.zoom) / 2;
+    const x = clamp(v.x, -f.left * k * z + halfW, f.right * k * z - halfW);
+    const y = Math.min(v.y, f.up * k * z - halfH);
+    if (x === v.x && y === v.y) return;
+    v.x = x;
+    v.y = y;
+    v.applyQuaternion(app.headQuat).add(app.headPos);
+    this.group.worldToLocal(v);
+    b.mesh.position.copy(v);
+  }
+
   get speaking(): boolean {
     return this.sayT < this.sayDur;
   }
@@ -201,6 +226,7 @@ export class PaperCharacter {
     this.tmp.copy(camWorld);
     this.group.worldToLocal(this.tmp);
     this.bubble.mesh.rotation.set(0, Math.atan2(this.tmp.x, this.tmp.z), 0);
+    this.keepBubbleInView();
 
     // walking
     let bob = 0;

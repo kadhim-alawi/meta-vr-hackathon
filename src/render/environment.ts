@@ -49,7 +49,7 @@ export class Environment {
     this.hemi = new HemisphereLight(0xfff4e6, 0x6b5848, 1.25);
     this.sun = new DirectionalLight(0xfff1dc, 1.7);
     this.sun.castShadow = true;
-    this.sun.shadow.mapSize.set(1024, 1024);
+    this.sun.shadow.mapSize.set(768, 768);
     const cam = this.sun.shadow.camera;
     cam.left = -0.45;
     cam.right = 0.45;

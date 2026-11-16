@@ -165,7 +165,13 @@ export class MenuScene implements Scene {
         this.app.save.reset();
         this.app.setScene('menu');
       }, '#ffd9d2', 0.1);
-      this.addButton('Back', null, 0, -0.06, () => {
+      this.addButton('Large text', s.bigUI ? 'on' : 'off', -0.11, -0.06, () => {
+        s.bigUI = !s.bigUI;
+        this.app.applySettings();
+        this.app.save.write();
+        this.show('settings');
+      }, undefined, 0.1);
+      this.addButton('Back', null, 0.11, -0.06, () => {
         this.app.desk.cancelCalibration();
         this.show('main');
       }, undefined, 0.08, 0.035);

@@ -17,7 +17,7 @@ export const SHEET_SIZE = 0.22;
 
 export class Stage {
   readonly group = new Group();
-  readonly hint = new TextCard(0.26, 2600);
+  readonly hint = Object.assign(new TextCard(0.26, 2600), { scalable: true });
   readonly foldlings: Foldling[] = [];
   fold: FoldController | null = null;
   private hintGoal = new Vector3(0, 0.15, -0.2);
@@ -185,7 +185,10 @@ export class Stage {
     this.hintAlpha += ((this.hintWanted ? 1 : 0) - this.hintAlpha) * damp(8, dt);
     this.hint.opacity = this.hintAlpha;
     this.hint.mesh.position.lerp(this.hintGoal, damp(6, dt));
-    if (this.hintAlpha > 0.05) this.keepInView(this.hint.mesh.position, this.hint.widthM / 2, this.hint.heightM / 2);
+    if (this.hintAlpha > 0.05) {
+      this.hint.refreshZoom();
+      this.keepInView(this.hint.mesh.position, (this.hint.widthM * this.hint.zoom) / 2, (this.hint.heightM * this.hint.zoom) / 2);
+    }
     this.hint.mesh.lookAt(this.app.headPos);
     // mat glide
     const mat = this.app.env.mat;

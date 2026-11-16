@@ -65,7 +65,10 @@ return to the menu.
   headset's own projection every frame and slides into a comfortable cone of *that* device's view.
 - **Accessible.** One-handed, either hand, seated. Captions are on by default. Every physical
   challenge has a fallback: drag instead of wave, the plane flies itself after a while, Kit fetches
-  the heart, and pages can auto-turn. *Skip this fold* is always available.
+  the heart, and pages can auto-turn. *Skip this fold* is always available. **Large text** (Settings)
+  scales the hint cards and Kit's speech bubbles, and captions can be turned off.
+- **Safe on slower devices.** If the frame rate stays low, the game lowers its own quality step by
+  step (foveation, a smaller shadow map, then no sun shadow) and never raises it again.
 
 ---
 

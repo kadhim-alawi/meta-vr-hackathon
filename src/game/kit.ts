@@ -30,7 +30,7 @@ export class PaperCharacter {
   protected head = new Group();
   protected armL = new Group();
   protected armR = new Group();
-  readonly bubble = new TextCard(0.16, 2600);
+  readonly bubble = Object.assign(new TextCard(0.16, 2600), { scalable: true, largeScale: 2.5 });
   protected t = 0;
   protected emote: Emote = 'idle';
   protected emoteT = 0;
@@ -194,7 +194,9 @@ export class PaperCharacter {
       }
     } else this.bubble.opacity = 0;
     // billboard the bubble towards the camera (yaw only), scaled with its own height
-    this.bubble.mesh.position.y = 0.075 + this.bubble.heightM / 2;
+    this.bubble.refreshZoom();
+    // lift the bubble as it grows so it clears Kit and whatever they hold
+    this.bubble.mesh.position.y = 0.075 + 0.05 * (this.bubble.zoom - 1) + (this.bubble.heightM * this.bubble.zoom) / 2;
     this.group.updateWorldMatrix(true, false);
     this.tmp.copy(camWorld);
     this.group.worldToLocal(this.tmp);

@@ -12,6 +12,8 @@ import { HandTracker } from '../xr/hands.js';
 import { HandVisuals } from '../xr/hand-visual.js';
 import { Room } from '../xr/room.js';
 import { PerfHud } from '../ui/perf-hud.js';
+import { TextCard } from '../ui/text.js';
+import { AdaptiveQuality } from './adaptive-quality.js';
 
 export interface Scene {
   readonly name: string;
@@ -63,6 +65,7 @@ export class App {
   timeScale = Number(new URLSearchParams(location.search).get('ts')) || 1;
   private lastSession: XRSession | undefined;
   private perf: PerfHud | null = null;
+  private quality = new AdaptiveQuality(this);
 
   constructor(readonly world: World) {
     world.scene.add(this.root);
@@ -99,6 +102,7 @@ export class App {
     this.audio.volumes.sfx = s.sfx;
     this.audio.volumes.voice = s.voice;
     this.audio.applyVolumes();
+    TextCard.largeText = s.bigUI || new URLSearchParams(location.search).get('bigtext') === '1';
   }
 
   private onVisibility(v: VisibilityState): void {
@@ -136,7 +140,7 @@ export class App {
       } catch {
         /* not supported */
       }
-      this.world.renderer.xr.setFoveation?.(0.5);
+      this.world.renderer.xr.setFoveation?.(0.75);
       document.body.classList.add('in-xr');
       // first frames of the session: let the desk settle, then begin
       this.setScene(this.firstScene());
@@ -148,6 +152,7 @@ export class App {
     const make = this.sceneFactory[name];
     if (!make) throw new Error(`unknown scene ${name}`);
     this.pending = () => make(arg);
+    this.quality.restart();
   }
 
   private updateFov(): void {
@@ -211,6 +216,7 @@ export class App {
 
     this.handVisuals.update(this.hands, this.headPos, () => false);
     this.perf?.update(rawDt);
+    this.quality.update(rawDt);
     this.sparkles.update(dt, this.headQuat);
     this.audio.setListener(this.headPos, this.headQuat);
   }

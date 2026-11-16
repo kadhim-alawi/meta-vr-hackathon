@@ -13,7 +13,7 @@ const suffix = chapter && chapter !== '0' ? `-ch${chapter}` : '';
 // E2E_SIZE=1280x720 and E2E_HEAD="x,y,z,pitchRadians" for nicer screenshots
 const [width, height] = (process.env.E2E_SIZE ?? '560x420').split('x').map(Number);
 const head = (process.env.E2E_HEAD ?? '0,1.2,0,-0.6').split(',').map(Number);
-const { page, logs, close } = await launch(`emulate=${device}&autostart=vr&scene=${scene}&ts=3`, { width, height });
+const { page, logs, close } = await launch(`emulate=${device}&autostart=vr&scene=${scene}&ts=${process.env.E2E_TS ?? 3}${process.env.E2E_EXTRA ?? ""}`, { width, height });
 const out = process.env.E2E_OUT ?? `test-results/playthrough-${device}${suffix}`;
 const t0 = Date.now();
 const log = (...a) => console.log(`[${((Date.now() - t0) / 1000).toFixed(0)}s]`, ...a);
@@ -233,6 +233,11 @@ for (;;) {
       await setPinch(page, R, 0);
       await frames(page, 30);
       await snap('letter-open');
+      // recording: move the hand away so the letter can be read
+      if (process.env.E2E_LINGER) {
+        await restHand();
+        await sleep(Number(process.env.E2E_LINGER));
+      }
       break;
     }
     default:

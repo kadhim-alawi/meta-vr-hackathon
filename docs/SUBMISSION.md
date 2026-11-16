@@ -52,6 +52,9 @@ that remember you.
   floor, then flies home.
 - **FoV-aware:** everything fits the VR Glasses' narrower view, and hints adapt to each headset's
   live field of view.
+- **Accessible:** one-handed, seated, captions, a Large text setting, and a fallback for every
+  physical challenge (the plane flies itself, Kit fetches the heart, pages can auto-turn).
+- **Steady frame rate:** if frames get slow on a device, the game lowers its own quality in steps.
 - **All procedural:** paper textures, pop-ups, characters, sound effects, voices and a generative
   music box. There are no asset downloads.
 - **Automated playtesting:** scripted emulated hands play the whole story in Meta's IWER emulator on

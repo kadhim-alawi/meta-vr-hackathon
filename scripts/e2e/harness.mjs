@@ -30,10 +30,18 @@ export function serve(dir = 'dist', port = 0) {
 
 export async function launch(query, { width = 720, height = 540 } = {}) {
   const server = await serve();
-  const browser = await chromium.launch({
-    args: ['--enable-webgl', '--use-gl=angle', '--use-angle=swiftshader', '--ignore-gpu-blocklist', '--enable-unsafe-swiftshader'],
+  // E2E_HW=1: real GPU in a visible window (about 60 fps), for recording footage. E2E_VIDEO=dir records it.
+  const hw = process.env.E2E_HW === '1';
+  const browser = await chromium.launch(
+    hw
+      ? { headless: false, args: ['--ignore-gpu-blocklist', '--enable-gpu-rasterization'] }
+      : { args: ['--enable-webgl', '--use-gl=angle', '--use-angle=swiftshader', '--ignore-gpu-blocklist', '--enable-unsafe-swiftshader'] },
+  );
+  const video = process.env.E2E_VIDEO;
+  const page = await browser.newPage({
+    viewport: { width, height },
+    ...(video ? { recordVideo: { dir: video, size: { width, height } } } : {}),
   });
-  const page = await browser.newPage({ viewport: { width, height } });
   const logs = [];
   page.on('console', (m) => logs.push(`[${m.type()}] ${m.text()}`));
   page.on('pageerror', (e) => logs.push(`[pageerror] ${e.message}\n${e.stack}`));

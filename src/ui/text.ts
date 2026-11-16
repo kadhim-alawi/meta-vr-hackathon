@@ -74,6 +74,21 @@ export class TextCard {
   private mat: MeshBasicMaterial;
   private key = '';
   heightM = 0;
+  /** Accessibility "Large text": scales cards that opt in (hints, speech bubbles), not buttons. */
+  static largeText = false;
+  scalable = false;
+  /** scale used when large text is on */
+  largeScale = 1.6;
+
+  /** Display scale: 1, or LARGE when large text is on and this card opted in. */
+  get zoom(): number {
+    return this.scalable && TextCard.largeText ? this.largeScale : 1;
+  }
+
+  /** Re-apply the scale after the setting changes. */
+  refreshZoom(): void {
+    this.mesh.scale.set(this.widthM * this.zoom, this.heightM * this.zoom, 1);
+  }
 
   constructor(
     public widthM: number,
@@ -185,7 +200,7 @@ export class TextCard {
     }
     this.tex.needsUpdate = true;
     this.heightM = H / this.pxPerM;
-    this.mesh.scale.set(this.widthM, this.heightM, 1);
+    this.refreshZoom();
   }
 
   dispose(): void {

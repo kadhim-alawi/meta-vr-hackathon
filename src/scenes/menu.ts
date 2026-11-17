@@ -87,7 +87,8 @@ export class MenuScene implements Scene {
   }
 
   private addButton(label: string, sub: string | null, x: number, y: number, onPress: () => void, color?: string, w = 0.15, h = 0.045): PokeButton {
-    const lines = sub ? [{ text: label, size: 1.25, font: 'title' as const }, { text: sub, size: 0.85, color: '#8a6a50' }] : [{ text: label, size: 1.35, font: 'title' as const }];
+    const k = TextCard.largeText ? 1.3 : 1; // Large text: bigger button text too (labels were readable, sub-labels were not)
+    const lines = sub ? [{ text: label, size: 1.25 * k, font: 'title' as const }, { text: sub, size: 0.85 * k, color: '#8a6a50' }] : [{ text: label, size: 1.35 * k, font: 'title' as const }];
     const b = new PokeButton({ width: w, height: h, lines, color, onPress: () => {
       this.app.audio.tap(this.app.fromDesk(this.panel.position));
       onPress();

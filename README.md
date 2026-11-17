@@ -10,7 +10,6 @@ fan, a heart. The paper you fold, with your own creases and colours, wakes up, d
 and gets to work.
 
 Entry for the **Meta VR Start Developer Competition 2026**, Gaming track, New Experience division.
-See [docs/COMPETITION_BRIEF.md](docs/COMPETITION_BRIEF.md) for the rules analysis and strategy.
 
 | | |
 |---|---|
@@ -177,7 +176,7 @@ jitter.
   including the shadow pass. Most scenes are lower.
 
 **Not yet verified on physical hardware.** Frame rate, hand-tracking feel and passthrough placement
-need a real Quest. See [docs/DEVICE_TEST_CHECKLIST.md](docs/DEVICE_TEST_CHECKLIST.md).
+need a real Quest.
 
 ## Credits
 

@@ -44,3 +44,12 @@ pids/
 .vscode/mcp.json
 .codex/config.toml
 test-results/
+
+# Working notes and dev scratch, not part of the submission (kept locally)
+HANDOVER.md
+docs/COMPETITION_BRIEF.md
+docs/VIDEO_SCRIPT.md
+docs/DEVICE_TEST_CHECKLIST.md
+scripts/e2e/*-debug*.mjs
+scripts/e2e/probe.mjs
+scripts/e2e/shots.mjs

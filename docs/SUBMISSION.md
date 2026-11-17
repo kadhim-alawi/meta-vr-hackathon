@@ -9,7 +9,7 @@ Fields follow the official form. ⚠ marks things only you can fill in.
 | Track | **Gaming** |
 | Division | **New Experience** (conceived and built from Oct 10, 2026, inside the window) |
 | Project link | `https://kadhim-alawi.github.io/meta-vr-hackathon/` ⚠ once hosting is live (see README → Deploy) |
-| Video | ⚠ public YouTube/Vimeo link, under 3:00 (`docs/VIDEO_SCRIPT.md`) |
+| Video | ⚠ public YouTube/Vimeo link, under 3:00 |
 | Target launch date | Spring 2027, as a web app on the Meta Horizon Store, alongside Meta VR Glasses |
 | Team | ⚠ name, email, role for each member |
 

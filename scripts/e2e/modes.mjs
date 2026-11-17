@@ -8,7 +8,10 @@
 import { launch, frames, sleep, shot } from './harness.mjs';
 
 const device = process.argv[2] ?? 'quest3';
-const { page, logs, close } = await launch(`emulate=${device}&autostart=vr&scene=menu&ts=3`, { width: 560, height: 420 });
+// E2E_SIZE / E2E_HEAD / E2E_TS / E2E_EXTRA as in playthrough.mjs (used to record the hub footage)
+const [width, height] = (process.env.E2E_SIZE ?? '560x420').split('x').map(Number);
+const head = (process.env.E2E_HEAD ?? '').split(',').map(Number);
+const { page, logs, close } = await launch(`emulate=${device}&autostart=vr&scene=menu&ts=${process.env.E2E_TS ?? 3}${process.env.E2E_EXTRA ?? ''}`, { width, height });
 const out = `test-results/modes-${device}`;
 const failures = [];
 const check = (ok, what) => {
@@ -16,11 +19,12 @@ const check = (ok, what) => {
   if (!ok) failures.push(what);
 };
 await sleep(1000);
-await page.evaluate(() => {
+await page.evaluate((head) => {
   const d = window.__xrdevice;
-  const p = -0.6;
+  const p = head.length === 4 ? head[3] : -0.6;
+  if (head.length === 4) d.position.set(head[0], head[1], head[2]);
   d.quaternion.set(Math.sin(p / 2), 0, 0, Math.cos(p / 2));
-});
+}, head);
 await sleep(2500);
 
 /** Every button in the current scene with its label. */
@@ -68,7 +72,10 @@ const save = () => page.evaluate(() => JSON.parse(JSON.stringify(window.__app.sa
 async function waitFor(fn, what, ms = 60000) {
   const t0 = Date.now();
   while (Date.now() - t0 < ms) {
-    if (await fn()) return true;
+    if (await fn()) {
+      await sleep(Number(process.env.E2E_PAUSE ?? 0)); // recording: let each screen be seen
+      return true;
+    }
     await sleep(250);
   }
   check(false, `timed out waiting for ${what}`);
@@ -87,6 +94,7 @@ check((await buttons()).some((b) => b.startsWith('Start the story')), 'fresh sav
 await shot(page, `${out}/01-hub.png`);
 
 // --- free fold ---
+await sleep(Number(process.env.E2E_PAUSE ?? 0));
 check(await poke('Free fold'), 'poke "Free fold"');
 await waitFor(async () => (await buttons()).includes('Puppy'), 'the model picker');
 await shot(page, `${out}/02-picker.png`);

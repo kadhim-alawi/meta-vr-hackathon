@@ -101,6 +101,7 @@ export class MenuScene implements Scene {
 
   private show(p: Panel): void {
     this.current = p;
+    if (p !== 'main') this.kit.hush(); // its bubble would sit on the new screen's title
     this.clearButtons();
     const save = this.app.save.data;
     if (p === 'main') {
@@ -185,6 +186,11 @@ export class MenuScene implements Scene {
     this.kit.update(dt, this.app.headPos);
     // panel faces the player
     this.panel.lookAt(this.app.headPos);
+    // Large text also enlarges the whole hub panel (buttons are poked, so bigger is easier too)
+    // scale and height per panel: taller panels get less zoom so the bottom row stays above the table
+    const big = TextCard.largeText ? ({ main: [1.45, 0.065], settings: [1.3, 0.13], pick: [1.15, 0.16] } as const)[this.current] : null;
+    this.panel.scale.setScalar(big ? big[0] : 1);
+    this.panel.position.y = big ? big[1] : 0.11;
     // a pressed button may rebuild the list, so stop at the first press
     for (let i = 0; i < this.buttons.length; i++) {
       if (this.buttons[i].update(this.app.hands, dt)) break;

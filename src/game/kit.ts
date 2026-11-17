@@ -153,6 +153,11 @@ export class PaperCharacter {
     b.mesh.position.copy(v);
   }
 
+  /** Cut the current line short (the menu moves on to another screen). */
+  hush(): void {
+    this.sayT = this.sayDur;
+  }
+
   get speaking(): boolean {
     return this.sayT < this.sayDur;
   }

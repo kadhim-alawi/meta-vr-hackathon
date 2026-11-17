@@ -118,7 +118,7 @@ export class MenuScene implements Scene {
       const streak = save.daily.streak;
       this.addButton(
         this.app.save.dailyDoneToday ? 'Daily fold ✓' : 'Daily fold',
-        this.app.save.dailyDoneToday ? `come back tomorrow · ${streak} day streak` : `today: ${daily.def.name}${streak ? ` · ${streak} day streak` : ''}`,
+        this.app.save.dailyDoneToday ? `streak ${streak} · back tomorrow` : `today: ${daily.def.name}${streak ? ` · ${streak} day streak` : ''}`,
         -0.085,
         -0.025,
         () => this.app.setScene('daily'),
